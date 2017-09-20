@@ -189,74 +189,75 @@ Calculate velocity from to center of mass measurements.
 pair<double, double> velocity(pair<double, double> com_t0,
                               pair<double, double> com_t1);
 
-int main(){
+int main() {
+  VideoCapture cap(0);
+  // if not successful, exit program
+  if (!cap.isOpened()) {
+    cout << "Cannot open the video cam" << endl;
+    return -1;
+  }
 
-    VideoCapture cap("looped_spirited_away.mp4");
-    // if not successful, exit program
-    if (!cap.isOpened())
-    {
-      cout << "Cannot open the video cam" << endl;
-      return -1;
-    }
-    namedWindow("VideoSource", WINDOW_AUTOSIZE);
-    Mat frame0;
-    bool bSuccess0 = cap.read(frame0);
+  //create a window called "MyVideoFrame0"
+  namedWindow("MyVideo0", WINDOW_AUTOSIZE);
+  Mat frame0;
+
+  // read a new frame from video
+  bool bSuccess0 = cap.read(frame0);
+
+  //if not successful, break loop
+  if (!bSuccess0)
+  {
+    cout << "Cannot read a frame from video stream" << endl;
+  }
+
+  //show the frame in "MyVideo" window
+  imshow("MyVideo0", frame0);
+  Mat binary_t0;
+  mySkinDetect(frame0, binary_t0);
+  pair <double, double> curr_c_mass = center_of_mass(binary_t0);
+  while (1) {
+    // read a new frame from video
+    Mat frame;
+    bool bSuccess = cap.read(frame);
+    imshow("MyVideo0", frame);
     //if not successful, break loop
-    if (!bSuccess0)
+    if (!bSuccess)
     {
       cout << "Cannot read a frame from video stream" << endl;
+      break;
     }
-    Mat frame0_b;
-    mySkinDetect(frame0, frame0_b);
-    pair <double, double> curr_c_mass = center_of_mass(frame0_b);
 
-    //show the frame in "MyVideo" window
-    imshow("VideoSource", frame0);
-    while (1) {
-      // read a new frame from video
-      Mat src;
-      bool bSuccess = cap.read(src);
-      imshow("VideoSource", src);
-      //if not successful, break loop
-      if (!bSuccess) {
-        cout << "Cannot read a frame from video stream" << endl;
-        break;
-      }
-      string gesture = "none";
-      display_match(gesture);
-      namedWindow("Source Image", WINDOW_AUTOSIZE);
-      imshow("Source Image", src);
+    // Put analysis here
 
-      // downsample image to create image pyramid.
-      // Image pyramid is ordered largest to smallest.
-      const int N_LAYERS = 3;
-      vector<Mat> image_pyramid = create_image_pyramids(src, N_LAYERS);
-      int count = N_LAYERS - 1;
-      // Update center of mass vector
-      while (count > -1 && gesture == "none") {
-          cout << "count: " << count << endl;
-          gesture = find_gesture(image_pyramid[count], curr_c_mass);
-          display_match(gesture);
-          count--;
+    string gesture = "none";
+    display_match(gesture);
+    // downsample image to create image pyramid.
+    // Image pyramid is ordered largest to smallest.
+    const int N_LAYERS = 4;
+    vector<Mat> image_pyramid = create_image_pyramids(frame, N_LAYERS);
+    int count = N_LAYERS - 1;
+    // Update center of mass vector
+    while (count > -1 && gesture == "none") {
+        // cout << "count: " << count << endl;
+        gesture = find_gesture(image_pyramid[count], curr_c_mass);
+        display_match(gesture);
+        count--;
       }
+    // End of analysis
+
+    frame0 = frame;
+    //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+    if (waitKey(30) == 27)
+    {
+      cout << "esc key is pressed by user" << endl;
+      break;
     }
-    Mat src = imread("../TestImages/HandTest.jpg");
-    Mat b_img;
-    mySkinDetect(src, b_img);
-    pair<double, double> com = center_of_mass(b_img);
-    cout << "COM: x = " << com.first << ", y = " << com.second << endl;
-    pair<double, double> com_2 = center_of_mass(b_img);
-    pair<double, double> delta = velocity(com_2, com);
-    cout << "delta x: " << delta.first << ", delta y: " << delta.second << endl;
-    if (!src.data) {
-        printf("No data! -- Exiting the program\n");
-        return -1;
-    }
-    namedWindow("b_img");
-    imshow("b_img", b_img);
-    waitKey(0);
-	return 0;
+
+  }
+  cap.release();
+  return 0;
 }
+
 
 Mat convert_to_grayscale(Mat& image) {
 	// Check for empty image
@@ -474,7 +475,7 @@ vector<int> boundary_box(Mat& binary_image) {
     // cout << "X boundaries: " << endl;
     for (int k = 0; k < x_boundaries.size(); k++) {
         pair<int, int> each = x_boundaries[k];
-        cout << '(' << each.first << ", " << each.second << ')' << endl;
+        // cout << '(' << each.first << ", " << each.second << ')' << endl;
     }
     // some form of overflow?
     int arr[] = {box_y1, box_y2, box_x1, box_x2};
@@ -506,7 +507,7 @@ double calculate_ncc(Mat& mat1, Mat& mat2) {
         }
     }
     ncc = abs(ncc / (mat1.rows*mat1.cols));
-    cout << "Calculated ncc: " << ncc << endl;
+    // cout << "Calculated ncc: " << ncc << endl;
     return ncc;
 }
 
@@ -527,7 +528,7 @@ bool match_template(Mat& src, Mat& template_img, double ncc_cutoff) {
             search_image = src(Range(row, row + window_length),
                                Range(col, col + window_width));
             double ncc = calculate_ncc(search_image, template_img);
-            cout << "Returned ncc: " << ncc << endl;
+            // cout << "Returned ncc: " << ncc << endl;
             if (ncc >= ncc_cutoff) {
                 return true;
             }
@@ -546,27 +547,26 @@ string find_gesture(Mat& src, pair<double, double>& prev_c_mass) {
     Mat binary_src = Mat::zeros(gray_src.rows, gray_src.cols, CV_8UC1);
     mySkinDetect(src, binary_src);
     pair <double, double> curr_c_mass = center_of_mass(binary_src);
-    cout << "Binary Image made." << endl;
+    // cout << "Binary Image made." << endl;
     vector<int> limits = boundary_box(binary_src);
-    cout << "Limits calculated:" << endl;
-    for (int i = 0; i < 4; i++) {
-        cout << limits[i] << ", ";
-    }
-    cout << endl;
+    // cout << "Limits calculated:" << endl;
+    // for (int i = 0; i < 4; i++) {
+    //     cout << limits[i] << ", ";
+    // }
+    // cout << endl;
     Mat gray_src_box = gray_src(Range(limits[0], limits[1]),
                                 Range(limits[2], limits[3]));
-    cout << "Image sub-selected." << endl;
+    // cout << "Image sub-selected." << endl;
     double length = (double)limits[1] - (double)limits[0];
     double width = (double)limits[3] - (double)limits[2];
     double l_w_ratio = length/width;
     pair <double, double> change_in_dir;
-    cout << "l_w_ratio: " << l_w_ratio << endl;
-    if (l_w_ratio < 0.7) {
+    if (l_w_ratio < 0.95) {
         return "fist";
     }
-    else if (l_w_ratio > 1.0) {
+    else if (l_w_ratio > 1.4) {
         change_in_dir = velocity(prev_c_mass, curr_c_mass);
-        if (abs(change_in_dir.first) > 10) {
+        if (abs(change_in_dir.first) > 5) {
           prev_c_mass = curr_c_mass;
           return "wave";
         }
