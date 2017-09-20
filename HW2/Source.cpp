@@ -170,7 +170,7 @@ double calculate_ncc(Mat& mat1, Mat& mat2);
 /**
 Find gesture in frame.
 */
-string find_gesture(Mat& src);
+string find_gesture(Mat& src, pair<double, double>& prev_c_mass);
 
 /**
 Display text images of gesture matches.
@@ -191,58 +191,55 @@ pair<double, double> velocity(pair<double, double> com_t0,
 
 int main(){
 
-    // VideoCapture cap("looped_spirited_away.mp4");
-    // // if not successful, exit program
-    // if (!cap.isOpened())
-    // {
-    //   cout << "Cannot open the video cam" << endl;
-    //   return -1;
-    // }
-    // namedWindow("VideoSource", WINDOW_AUTOSIZE);
-    // Mat frame0;
-    // bool bSuccess0 = cap.read(frame0);
-    //
-    // //if not successful, break loop
-    // if (!bSuccess0)
-    // {
-    //   cout << "Cannot read a frame from video stream" << endl;
-    // }
-    //
-    // //show the frame in "MyVideo" window
-    // imshow("VideoSource", frame0);
-    // while (1) {
-    //   // read a new frame from video
-    //   Mat src;
-    //   bool bSuccess = cap.read(src);
-    //   imshow("VideoSource", src);
-    //   //if not successful, break loop
-    //   if (!bSuccess) {
-    //     cout << "Cannot read a frame from video stream" << endl;
-    //     break;
-    //   }
-    //   string gesture = "none";
-    //   display_match(gesture);
-    //   namedWindow("Source Image", WINDOW_AUTOSIZE);
-    //   imshow("Source Image", src);
-    //
-    //   // downsample image to create image pyramid.
-    //   // Image pyramid is ordered largest to smallest.
-    //   const int N_LAYERS = 3;
-    //   vector<Mat> image_pyramid = create_image_pyramids(src, N_LAYERS);
-    //   int count = N_LAYERS - 1;
-    //   // Update center of mass vector
-    //   while (count > -1 && gesture == "none") {
-    //       cout << "count: " << count << endl;
-    //       gesture = find_gesture(image_pyramid[count]);
-    //       if (gesture == "hand") {
-    //         // calculate center of mass
-    //         // update center of mass vector
-    //         // calculate velocity
-    //       }
-    //       display_match(gesture);
-    //       count--;
-    //   }
-    // }
+    VideoCapture cap("looped_spirited_away.mp4");
+    // if not successful, exit program
+    if (!cap.isOpened())
+    {
+      cout << "Cannot open the video cam" << endl;
+      return -1;
+    }
+    namedWindow("VideoSource", WINDOW_AUTOSIZE);
+    Mat frame0;
+    bool bSuccess0 = cap.read(frame0);
+    //if not successful, break loop
+    if (!bSuccess0)
+    {
+      cout << "Cannot read a frame from video stream" << endl;
+    }
+    Mat frame0_b;
+    mySkinDetect(frame0, frame0_b);
+    pair <double, double> curr_c_mass = center_of_mass(frame0_b);
+
+    //show the frame in "MyVideo" window
+    imshow("VideoSource", frame0);
+    while (1) {
+      // read a new frame from video
+      Mat src;
+      bool bSuccess = cap.read(src);
+      imshow("VideoSource", src);
+      //if not successful, break loop
+      if (!bSuccess) {
+        cout << "Cannot read a frame from video stream" << endl;
+        break;
+      }
+      string gesture = "none";
+      display_match(gesture);
+      namedWindow("Source Image", WINDOW_AUTOSIZE);
+      imshow("Source Image", src);
+
+      // downsample image to create image pyramid.
+      // Image pyramid is ordered largest to smallest.
+      const int N_LAYERS = 3;
+      vector<Mat> image_pyramid = create_image_pyramids(src, N_LAYERS);
+      int count = N_LAYERS - 1;
+      // Update center of mass vector
+      while (count > -1 && gesture == "none") {
+          cout << "count: " << count << endl;
+          gesture = find_gesture(image_pyramid[count], curr_c_mass);
+          display_match(gesture);
+          count--;
+      }
+    }
     Mat src = imread("../TestImages/HandTest.jpg");
     Mat b_img;
     mySkinDetect(src, b_img);
@@ -539,7 +536,7 @@ bool match_template(Mat& src, Mat& template_img, double ncc_cutoff) {
     return false;
 }
 
-string find_gesture(Mat& src) {
+string find_gesture(Mat& src, pair<double, double>& prev_c_mass) {
     Mat gray_src;
     if (src.channels() > 1) {
         cvtColor(src, gray_src, CV_BGR2GRAY);
@@ -548,6 +545,7 @@ string find_gesture(Mat& src) {
     }
     Mat binary_src = Mat::zeros(gray_src.rows, gray_src.cols, CV_8UC1);
     mySkinDetect(src, binary_src);
+    pair <double, double> curr_c_mass = center_of_mass(binary_src);
     cout << "Binary Image made." << endl;
     vector<int> limits = boundary_box(binary_src);
     cout << "Limits calculated:" << endl;
@@ -561,16 +559,23 @@ string find_gesture(Mat& src) {
     double length = (double)limits[1] - (double)limits[0];
     double width = (double)limits[3] - (double)limits[2];
     double l_w_ratio = length/width;
+    pair <double, double> change_in_dir;
     cout << "l_w_ratio: " << l_w_ratio << endl;
     if (l_w_ratio < 0.7) {
         return "fist";
     }
     else if (l_w_ratio > 1.0) {
+        change_in_dir = velocity(prev_c_mass, curr_c_mass);
+        if (abs(change_in_dir.first) > 10) {
+          prev_c_mass = curr_c_mass;
+          return "wave";
+        }
         return "hand";
     }
     else if (match_template(gray_src_box, THUMBS_TEMPLATE_1), 0.7) {
         return "thumbs";
     }
+    prev_c_mass = curr_c_mass;
     return "none";
 }
 
