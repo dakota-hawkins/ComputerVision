@@ -177,31 +177,86 @@ Display text images of gesture matches.
 */
 void display_match(string match);
 
+/**
+Calculate center of mass for binary images.
+@return pair<double, double> x_bar, y_bar.
+*/
+pair<double, double> center_of_mass(Mat& binary_image);
+
+/**
+Calculate velocity from to center of mass measurements.
+*/
+pair<double, double> velocity(pair<double, double> com_t0,
+                              pair<double, double> com_t1);
+
 int main(){
 
-    // downsample image to create image pyramid.
-    // Image pyramid is ordered largest to smallest.
-    Mat src = imread("../TestImages/ThumbTest.jpg");
-
+    // VideoCapture cap("looped_spirited_away.mp4");
+    // // if not successful, exit program
+    // if (!cap.isOpened())
+    // {
+    //   cout << "Cannot open the video cam" << endl;
+    //   return -1;
+    // }
+    // namedWindow("VideoSource", WINDOW_AUTOSIZE);
+    // Mat frame0;
+    // bool bSuccess0 = cap.read(frame0);
+    //
+    // //if not successful, break loop
+    // if (!bSuccess0)
+    // {
+    //   cout << "Cannot read a frame from video stream" << endl;
+    // }
+    //
+    // //show the frame in "MyVideo" window
+    // imshow("VideoSource", frame0);
+    // while (1) {
+    //   // read a new frame from video
+    //   Mat src;
+    //   bool bSuccess = cap.read(src);
+    //   imshow("VideoSource", src);
+    //   //if not successful, break loop
+    //   if (!bSuccess) {
+    //     cout << "Cannot read a frame from video stream" << endl;
+    //     break;
+    //   }
+    //   string gesture = "none";
+    //   display_match(gesture);
+    //   namedWindow("Source Image", WINDOW_AUTOSIZE);
+    //   imshow("Source Image", src);
+    //
+    //   // downsample image to create image pyramid.
+    //   // Image pyramid is ordered largest to smallest.
+    //   const int N_LAYERS = 3;
+    //   vector<Mat> image_pyramid = create_image_pyramids(src, N_LAYERS);
+    //   int count = N_LAYERS - 1;
+    //   // Update center of mass vector
+    //   while (count > -1 && gesture == "none") {
+    //       cout << "count: " << count << endl;
+    //       gesture = find_gesture(image_pyramid[count]);
+    //       if (gesture == "hand") {
+    //         // calculate center of mass
+    //         // update center of mass vector
+    //         // calculate velocity
+    //       }
+    //       display_match(gesture);
+    //       count--;
+    //   }
+    // }
+    Mat src = imread("../TestImages/HandTest.jpg");
+    Mat b_img;
+    mySkinDetect(src, b_img);
+    pair<double, double> com = center_of_mass(b_img);
+    cout << "COM: x = " << com.first << ", y = " << com.second << endl;
+    pair<double, double> com_2 = center_of_mass(b_img);
+    pair<double, double> delta = velocity(com_2, com);
+    cout << "delta x: " << delta.first << ", delta y: " << delta.second << endl;
     if (!src.data) {
         printf("No data! -- Exiting the program\n");
         return -1;
     }
-    string gesture = "none";
-    display_match(gesture);
-    namedWindow("Source Image", WINDOW_AUTOSIZE);
-    imshow("Source Image", src);
-    const int N_LAYERS = 3;
-    vector<Mat> image_pyramid = create_image_pyramids(src, N_LAYERS);
-
-    int count = N_LAYERS - 1;
-    while (count > -1 && gesture == "none") {
-        cout << "count: " << count << endl;
-        gesture = find_gesture(image_pyramid[count]);
-        display_match(gesture);
-        count--;
-
-    }
+    namedWindow("b_img");
+    imshow("b_img", b_img);
     waitKey(0);
 	return 0;
 }
@@ -216,8 +271,8 @@ Mat convert_to_grayscale(Mat& image) {
 	if (channels == 1) {
 		return image;
 	}
-	
-	// instantiate empty image for grayscale 
+
+	// instantiate empty image for grayscale
 	Mat gray_image = Mat::zeros(image.rows, image.cols, CV_8UC1);
 	for (int row = 0; row < image.rows; row++) {
 		for (int col = 0; col < image.cols; col++) {
@@ -475,7 +530,7 @@ bool match_template(Mat& src, Mat& template_img, double ncc_cutoff) {
             search_image = src(Range(row, row + window_length),
                                Range(col, col + window_width));
             double ncc = calculate_ncc(search_image, template_img);
-            // cout << "Returned ncc: " << ncc << endl;
+            cout << "Returned ncc: " << ncc << endl;
             if (ncc >= ncc_cutoff) {
                 return true;
             }
@@ -506,44 +561,47 @@ string find_gesture(Mat& src) {
     double length = (double)limits[1] - (double)limits[0];
     double width = (double)limits[3] - (double)limits[2];
     double l_w_ratio = length/width;
-    // if (match_template(gray_src_box, THUMBS_TEMPLATE_1)) {
-    //     return "thumbs";
-    // }
-    // if (l_w_ratio > 1.4) {
-    //   return "hand";
-    // // } else if (l_w_ratio < 1.3 && l_w_ratio > 0.9) {
-    // //   return "thumb";
-    // } else if (l_w_ratio < 0.7) {
-    //   return "fist";
-    // }
-    resize(gray_src_box, gray_src_box, THUMBS_TEMPLATE_1.size())
     cout << "l_w_ratio: " << l_w_ratio << endl;
     if (l_w_ratio < 0.7) {
         return "fist";
-    // } else if (l_w_ratio > 1.4) {
-    //     return "hand";
-    // }
-    } else if (match_template(gray_src_box, HAND_TEMPLATE_1)) {
+    }
+    else if (l_w_ratio > 1.0) {
         return "hand";
-    } else if (match_template(gray_src_box, THUMBS_TEMPLATE_1)) {
+    }
+    else if (match_template(gray_src_box, THUMBS_TEMPLATE_1), 0.7) {
         return "thumbs";
-    } 
+    }
     return "none";
 }
 
 void display_match(string match) {
-  namedWindow("Gesture Label", WINDOW_AUTOSIZE);
-  Mat gesture_label;
-  if (match == "fist") {
-    gesture_label = imread("../Templates/FistDisplay.jpg");
-  } else if (match == "hand") {
-    gesture_label = imread("../Templates/HandDisplay.jpg");
-  } else if (match == "thumbs") {
-    gesture_label = imread("../Templates/ThumbsUpDisplay.jpg");
-  } else if (match == "wave") {
-    gesture_label = imread("../Templates/WaveDisplay.jpg");
-  } else {
-    gesture_label = imread("../Templates/NoDisplay.jpg");
-  }
-  imshow("Gesture Label", gesture_label);
+    namedWindow("Gesture Label", WINDOW_AUTOSIZE);
+    Mat gesture_label;
+    if (match == "fist") {
+      gesture_label = imread("../Templates/FistDisplay.jpg");
+    } else if (match == "hand") {
+      gesture_label = imread("../Templates/HandDisplay.jpg");
+    } else if (match == "thumbs") {
+      gesture_label = imread("../Templates/ThumbsUpDisplay.jpg");
+    } else if (match == "wave") {
+      gesture_label = imread("../Templates/WaveDisplay.jpg");
+    } else {
+      gesture_label = imread("../Templates/NoDisplay.jpg");
+    }
+    imshow("Gesture Label", gesture_label);
+}
+
+pair<double, double> center_of_mass(Mat& binary_image) {
+    pair<double, double> com;
+    Moments m = moments(binary_image, true);
+    com.first = m.m10/m.m00;
+    com.second = m.m01/m.m00;
+    return com;
+}
+
+pair<double, double> velocity(pair<double, double> com_t0, pair<double, double> com_t1) {
+    pair<double, double> delta;
+    delta.first = com_t1.first - com_t0.first; // ∆x
+    delta.second = com_t1.second - com_t0.second; // ∆y
+    return delta;
 }
