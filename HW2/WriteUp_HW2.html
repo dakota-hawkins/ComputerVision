@@ -1,0 +1,400 @@
+
+<html>
+<head>
+<title> CS585 Homework Template: HW[x] Student Name [xxx]  </title>
+<style>
+<!--
+body{
+font-family: 'Trebuchet MS', Verdana;
+}
+p{
+font-family: 'Trebuchet MS', Times;
+margin: 10px 10px 15px 20px;
+}
+h3{
+margin: 5px;
+}
+h2{
+margin: 10px;
+}
+h1{
+margin: 10px 0px 0px 20px;
+}
+div.main-body{
+align:center;
+margin: 30px;
+}
+hr{
+margin:20px 0px 20px 0px;
+}
+td{
+  text-align: center;
+}
+-->
+</style>
+</head>
+
+<body>
+<center>
+<a href="http://www.bu.edu"><img border="0" src="http://www.cs.bu.edu/fac/betke/images/bu-logo.gif"
+width="119" height="120"></a>
+</center>
+
+<h1> Template matching, circularity, ROC analysis.</h1>
+<p>
+ CS 585 HW 2 <br>
+ Dakota Hawkins <br>
+ <br>
+    September 20, 2017
+</p>
+
+<div class="main-body">
+<hr>
+<h2> Problem Definition </h2>
+<p>
+<p>
+This assignment requires us to correctly identify up to four hand-based gestures
+in a live-feed video. Image recognition is a rapidly growing field, with
+companies like Apple recently announcing phone unlock through facial recognition.
+This assignment allows us to explore the basics of image recognition, and gets
+us used to the difficulties of performing image recognition.
+</p>
+<p>
+During this assignment I made a few assumptions: firstly I assumed any major
+skin-colored object in the frame was a hand. Next, to label waving I assumed if
+movement occurred in the x-direction, we could consider this movement a
+wave. Next, I assumed skin detection can be done accurately using the Peer
+metric. Finally, I assumed skin detection would result in nice projections where
+the edges of larger objects are easily distinguished by zeros in the projection
+vector. Because the computations need to occur realtime, I anticipated one of
+the difficulties to be getting all calculations and labelling complete without
+creating a lag. Further, coming up with metrics and methods that are
+<i>rotationally invariant</i> will also prove a challenge.
+</p>
+
+<hr>
+<h2> Method and Implementation </h2>
+<p>
+In all gesture labelling, an image pyramid was constructed. Four layers were
+sized for each frame, and calculation started at the lowest frame. If no label
+was produced in the lowest layer, the calculations would then move up to the
+next smallest layer. This process would repeat until calculations were being
+conducted on the original image itself.
+</p>
+<p>
+During the labelling process, Boundary boxes were calculated using binary images
+for each frame. Binary images were produced by thresholding RGB values by the Peer metric for skin
+color. Once a box isolated the portion of interest, the length and width of the
+box was calculated. If the length:width ratio exceeded 1.4, the gesture was
+considered an open hand ("hand"). Likewise, if this ratio was below 0.95 the
+gesture was labeled "fist". To determine if the subject is waving, I calculated
+the center of mass of the binary image for the frame at t = k and t = k - 1. If
+the center of masse exhibited a shift in the x-direction, the gesture was
+labelled "wave". Finally, to label the "thumbs up" gesture, I used template
+matching where I calculated the normalized correlation coefficient. If R > 0.7
+the gesture was labelled "thumbs up".
+</p>
+
+<h3> Functions </h3>
+<p>
+
+<br />
+<b>Mat convert_to_grayscale(Mat& image) </b><br />
+Convert three-channeled images to grayscale using the average intensity.
+<br />
+
+<br />
+<b> bool peer_metric(Vec3b& bgr) </b> <br />
+Function to determine whether an BGR color vector matches the Peer metric for
+skin color.<br />
+param bgr: vector denoting Blue, Green, Red color pixel.
+<br />
+
+<br />
+<b>int euclidean_color_difference(Vec3b& cur_color, Vec3b& past_color);</b> <br />
+Function to estimate the euclidean distance between two RGB color pixels.
+<br />
+
+<br />
+<b>vector<Mat> create_image_pyramids(Mat& img, int n_layers=2);
+</b>
+Function to create a vector denoting an image pyramid ordered largest to
+smallest.
+<br />
+@param img (cv2::Mat) source image used to create image pyramid.
+<br />
+@param n_layers (int) number of layers in the pyramid to create.
+<br />
+@return (vector<Mat>) vector containing downsized images.
+<br />
+
+<br />
+<b>vector<int> boundary_box(Mat& binary_image);</b><br />
+Find a rough boundary box for a binary image using x and y projections.
+<br />
+@param binary image(cv2::Mat): binary image to search.
+<br />
+@param dst(cv2::Mat): matrix to hold boundary box data.
+<br />
+
+<br />
+<b>vector<pair<int, int> > find_zeros(Mat& src);</b><br />
+Find zeros in a matrix.
+<br />
+@param src(cv2::Mat): matrix to find zeros in.
+<br />
+@return vector<tuple>: vector of tupels containg row, col coordinates for zeros.
+<br />
+
+<br />
+<b>vector<pair<int, int> > find_boundaries(Mat& projection);
+</b><br />
+Find boundaries from a projection.
+<br />
+@param projection(cv2::Mat): axis projection of image.
+<br />
+
+<br />
+<b>bool match_template(Mat& src, Mat& template_img, double ncc_cutoff = 0.7);
+</b> <br />
+Search over image for template matching using NCC
+<br />
+@param src (cv2::Mat): matrix image to compare to template.
+<br />
+@param template_img (cv2::Mat): matrix image of template.
+<br />
+@param ncc_cutoff(double, optional): threshold value to determine whether the
+    template exists within the image.
+<br />
+@ return (bool): whether the template image exists within the parent image.
+<br />
+
+
+<br />
+<b>double calculate_ncc(Mat& mat1, Mat& mat2);</b><br />
+Calculate normalized correlations coefficient (NCC) between two matrices of the
+same shape.
+<br />
+@param mat1 (cv2::Mat): first (m x n) matrix.
+<br />
+@param mat2 (cv2::Mat): second (m x n) matrix.
+<br />
+@return (double): calculated NCC.
+<br />
+
+<br />
+<b>string find_gesture(Mat& src, pair<double, double>& prev_c_mass);
+</b><br />
+Find gesture in frame.
+<br />
+
+<br />
+<b>void display_match(string match);</b><br />
+Display text images of gesture matches.
+<br />
+
+
+<br /><b>pair<double, double> center_of_mass(Mat& binary_image);</b><br  />
+Calculate center of mass for binary images.
+<br />
+@return pair<double, double> x_bar, y_bar.
+<br />
+
+<br />
+<b>pair<double, double> velocity(pair<double, double> com_t0,
+                              pair<double, double> com_t1);</b>
+<br />
+Calculate velocity from to center of mass measurements.
+<br />
+<br />
+<b>void mySkinDetect(Mat& src, Mat& dst);</b><br />
+Function that detects whether a pixel belongs to the skin based on RGB values
+<br />
+@param src The source color image
+<br />
+@param dst The destination grayscale image where skin pixels are colored white and the rest are colored black
+</p>
+
+<hr>
+<h2>Experiments</h2>
+<p>
+To assess the performance of the classifier, I performed 28 gestures and
+on pre-recorded movies and calculated the confusion matrix for each gesture. The
+same video was used to score each gesture; however scoring was done one-at-a-time
+(i.e. during the first viewing, 'hand' was considered as the positive case and
+all other gestures were labelled negative.). I then calulcated accuracy,
+recall, false positive rate (F.P.R.) to assess the classifier.
+</p>
+
+<hr>
+<h2> Results</h2>
+
+<h3> Example Inputs and Outputs </h3>
+The following table shows characteristic input and their expected output. A hand
+image was placed for the `wave` input image, since movement is not properly
+represented in an image.
+
+<table>
+<tr><td colspan=3><center><h3>Results</h3></center></td></tr>
+<tr>
+<td> Trial </td><td> Source Image </td> <td> Result Image</td>
+</tr>
+<tr>
+  <td> Hand </td>
+  <td> <img src="HandTemplate3.jpg"> </td>
+  <td> <img src="HandDisplay.jpg"> </td>
+</tr>
+<tr>
+  <td> Fist </td>
+  <td> <img src="FistTemplate2.jpg"> </td>
+  <td> <img src="FistDisplay.jpg"> </td>
+</tr>
+<tr>
+  <td> Wave </td>
+  <td> <img src="HandTemplate3.jpg"> </td>
+  <td> <img src="WaveDisplay.jpg"> </td>
+</tr>
+<tr>
+  <td> Thumbs Up </td>
+  <td> <img src="ThumbsUpTemplate1.jpg"> </td>
+  <td> <img src="ThumbsUpDisplay.jpg"> </td>
+</tr>
+</table>
+
+<h3>ROC Analysis</h3>
+
+<table>
+  <tr>
+    <td></td><th>Hand</th><th>Not Hand</th>
+  </tr>
+  <tr>
+    <th>Hand</th><td>7</td><td>1</td>
+  </tr>
+  <tr>
+    <th>Not Hand</th><td>1</td><td>19</td>
+  </tr>
+</table>
+<br /><br />
+
+<table>
+  <tr>
+    <td></td><th>Fist</th><th>Not Fist</th>
+  </tr>
+  <tr>
+    <th>Fist</th><td>4</td><td>0</td>
+  </tr>
+  <tr>
+    <th>Not Fist</th><td>2</td><td>22</td>
+  </tr>
+</table>
+<br /><br />
+
+<table>
+  <tr>
+    <td></td><th>Wave</th><th>Not Wave</th>
+  </tr>
+  <tr>
+    <th>Wave</th><td>8</td><td>0</td>
+  </tr>
+  <tr>
+    <th>Not Wave</th><td>0</td><td>20</td>
+  </tr>
+</table>
+<br /><br />
+
+<table>
+  <tr>
+    <td></td><th>Thumbs Up</th><th>Not Thumbs Up</th>
+  </tr>
+  <tr>
+    <th>Thumbs Up</th><td>7</td><td>2</td>
+  </tr>
+  <tr>
+    <th>Not Thumbs Up</th><td>0</td><td>19</td>
+  </tr>
+</table>
+<br /><br />
+<table>
+  <tr>
+    <td></td>
+    <th>
+      Accuracy
+    </th>
+    <th>
+      Recall
+    </th>
+    <th>
+      F.P.R.
+    </th>
+    <th>
+      Precision
+    </th>
+  </tr>
+  <tr>
+    <th>Hand</th><td>0.93</td><td>0.88</td><td>0.05</td><td>0.88</td>
+  </tr>
+  <tr>
+    <th>Fist</th><td>0.93</td><td>0.66</td><td>0.00</td><td>1.00</td>
+  </tr>
+  <tr>
+    <th>Wave</th><td>1.00</td><td>1.00</td><td>0.00</td><td>1.00</td>
+  </tr>
+  <tr>
+    <th>Thumbs Up</th><td>0.93</td><td>1.00</td><td>0.10</td><td>0.78</td>
+  </tr>
+</table>
+
+<hr>
+<h2> Discussion </h2>
+
+<p>
+The algorithm performs generally well under strict settings. The above results
+generally represent ideal conditions: I generally tried to keep my thumb <i>in</i>
+as much as possible during the `hand` and `fist` gestures in order to not register
+as a false `thumbs up`. Similarly, it was not uncommon for the label to change
+several times during its interval. Therefore, label that appeared to stay around
+the longest was considered to be the actual output. Further, because `wave` is
+the only motion-based gesture, it simply sufficed to detect motion, likely
+inflating its performance. This is likely the cause of `wave`s perfect
+performance. However, given the confines of the experiment, the algorithm
+performed well with all accuracies above 90%. One major issue is the program
+can sometimes crash due to an unknown issue.
+</p>
+<p>
+Future work should look to establish rotationally invariant metrics to classify
+gestures. Both the length:width ratio and the thumbs up template assumed
+perfect x-y alignments. In every day videos it is unusual for human movement to
+be so perfectly aligned. As circles are radially symmetric, it may be better
+to create a measure of "circleness" and use this to dilineate between "hand"
+and "fist". The rigid template imposed by "thumbs up" may be relieved if we
+found a better way to compare to multiple templates. As it stands, comparing
+to many templates during a live-video feed produced too much lag to be practical.
+</p>
+
+<hr>
+<h2> Conclusions </h2>
+
+<p>
+While the program is extremely limited in its ability to label gestures generally,
+it does perform quite well under the conditions it was meant to account for,
+reaching greather than 90% accuracy across all four gestures. In order to increase
+general performance and practicallity, future work should look to incorporate more
+rotationally invariant solutions for gesture labelling.
+</p>
+
+
+<hr>
+<h2> Credits and Bibliography </h2>
+<p>
+
+<p>
+For this assignment I accessed the OpenCV documentation from Sept. 17 - Sept. 20.
+Documentation can be found at
+<a href='http://docs.opencv.org/3.3.0/'>http://docs.opencv.org/3.3.0/</a>.
+</p>
+</div>
+</body>
+
+
+
+</html>
