@@ -561,15 +561,14 @@ string find_gesture(Mat& src, pair<double, double>& prev_c_mass) {
     double width = (double)limits[3] - (double)limits[2];
     double l_w_ratio = length/width;
     pair <double, double> change_in_dir;
-    if (l_w_ratio < 0.95) {
+    change_in_dir = velocity(prev_c_mass, curr_c_mass);
+    if (abs(change_in_dir.first) > 2) {
+      prev_c_mass = curr_c_mass;
+      return "wave";
+    } else if (l_w_ratio < 0.95) {
         return "fist";
     }
     else if (l_w_ratio > 1.4) {
-        change_in_dir = velocity(prev_c_mass, curr_c_mass);
-        if (abs(change_in_dir.first) > 5) {
-          prev_c_mass = curr_c_mass;
-          return "wave";
-        }
         return "hand";
     }
     else if (match_template(gray_src_box, THUMBS_TEMPLATE_1), 0.7) {
