@@ -1,5 +1,7 @@
 *.out
 *.jpg
+*.png
 *.mov
 *.tar.gz
 *.mp4
+*.ppm
