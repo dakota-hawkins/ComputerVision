@@ -17,19 +17,25 @@ int main(int argc, char * argv[]) {
     using ::std::endl;
     // cv2::imread("../BinaryImages/open-bw-full.png", "")
     cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/open_fist-bw.png",
+    open_full = cv::imread("../BinaryImages/tumor-fold.png",
                            cv::IMREAD_GRAYSCALE);
     //cv::Mat open_full_binary = binarize_image(open_full);
     cv::Mat b_img = binarize_image(open_full);
     cv::Mat test = recursive_label(b_img);
+    cout << "before conv: " << int(test.at<uchar>(16, 399)) << endl;
     // cv::Mat labeled_full = sequential_label(open_full_binary);
-    test.convertTo(test, CV_8UC1);
-    // cv::Mat colored_full = color_labels(test);
+
+    // This is fucking me. 
+    // cv::Mat display;
+    // test.convertTo(display, CV_8UC1);
+    // cou t << "d.value: " << int(display.at<uchar>(16, 399)) << endl;
+    cout << "b.value: " << int(b_img.at<uchar>(16, 399)) << endl;
+    cv::Mat colored_full = color_labels(test);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
     cv::imshow("open-bw-full", open_full);
     cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
     //cv::setMouseCallback("colored_full", mouse_callback, &colored_full);
-    cv::imshow("colored_full", test);
+    cv::imshow("colored_full", colored_full);
     cv::waitKey(0);
     return 0;
 }
@@ -42,10 +48,10 @@ cv::Mat recursive_label(cv::Mat& b_img) {
     std::stack<std::pair<int, int> > pixel_stack;
     int count = 0;
     // swap 1s to -1s
-    for (int i = 0; i < b_img.rows; i++) {
-        for (int j = 0; j < b_img.cols; j++) {
-            if (b_img.at<uchar>(i, j) == 1) {
-                neg_b.at<schar>(i, j) = -1; 
+    for (int b_row = 0; b_row < b_img.rows; b_row++) {
+        for (int b_col = 0; b_col < b_img.cols; b_col++) {
+            if (b_img.at<uchar>(b_row, b_col) == 1) {
+                neg_b.at<schar>(b_row, b_col) = -1; 
             }
         }
     }
@@ -97,6 +103,7 @@ cv::Mat recursive_label(cv::Mat& b_img) {
         }
     }
     std::cout << "labels: " << count << std::endl;
+    cout << "value: " << int(neg_b.at<schar>(16, 399)) << endl;
     return neg_b;
 }
 
@@ -106,6 +113,10 @@ std::vector<std::pair<int, int> > get_neighbors(cv::Mat& img, int y, int x) {
     int row_end = std::min(img.rows, y + 1);
     int col_start = std::max(0, x - 1);
     int col_end = std::min(img.cols, x + 1);
+    // int row_start = y - 1;
+    // int row_end =  y + 1;
+    // int col_start =  x - 1;
+    // int col_end = x + 1;
     // Instantiate empty vector
     std::vector<std::pair<int, int> > neighbors;
     for (int row = row_start; row < row_end + 1; row++) {
@@ -342,8 +353,8 @@ cv::Mat color_labels(cv::Mat& label_img) {
     // iterate over labelled image, match label to (label mod 6) color.
     for (int row = 0; row < colored.rows; row++) {
         for (int col = 0; col < colored.cols; col++) {
-            if (label_img.at<uchar>(row, col) != 0) {
-                int color_idx = label_img.at<uchar>(row, col) % 6;
+            if (label_img.at<schar>(row, col) != 0) {
+                int color_idx = (label_img.at<schar>(row, col)) % 6;
                 colored.at<cv::Vec3b>(row, col) = color_map[color_idx]; 
             }
         }
