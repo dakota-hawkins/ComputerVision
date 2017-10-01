@@ -94,6 +94,20 @@ will be ignored.
 */
 std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n_cols);
 
+
+/*
+Get N8 of a pixel. 
+
+Returns a vector of pairs. Each pair is a pixel. Clockwise rotation starts West
+and ends South West. If a pixel lays outside of image boundaries, it is ignored. 
+
+@param c_row(int): current row.
+@param c_col(int): current column.
+@param n_rows(int): total number of rows in image.
+@param n_cols(int): total number of columns in image.
+*/
+std::vector<std::pair<int, int> > clockwise_n8(int c_row, int c_col, int n_rows, int n_cols);
+
 /*
 Binarize image by converting 255's to 0 and 0's to 1's. 
 
