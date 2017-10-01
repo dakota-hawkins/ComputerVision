@@ -22,7 +22,7 @@ int main(int argc, char * argv[]) {
     // cv::Mat b_img = binarize_image(open_full); // this is probably losing the info.
 
     std::vector<std::pair<int, int> > n8_test = clockwise_n8(3, 3, 5, 5);
-    print_vector_of_pairs(n8_test);
+    // print_vector_of_pairs(n8_test);
     cv::Mat b_img;
     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
     cv::Mat eroded;
@@ -31,6 +31,8 @@ int main(int argc, char * argv[]) {
     cv::Mat labelled = recursive_label(eroded);
     cv::Mat colored_full = color_labels(labelled);
     cv::Mat eroded_color = color_labels(eroded);
+    cv::Mat borders;
+    find_boundary(labelled, borders);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
     cv::imshow("open-bw-full", open_full);
     cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
@@ -38,6 +40,8 @@ int main(int argc, char * argv[]) {
     cv::imshow("colored_full", colored_full);
     cv::namedWindow("colored-eroded", cv::WINDOW_AUTOSIZE);
     cv::imshow("colored-eroded", eroded_color);
+    cv::namedWindow("colored-borders", cv::WINDOW_AUTOSIZE);
+    cv::imshow("colored-borders", borders);
     cv::waitKey(0);
     return 0;
 }
@@ -67,7 +71,7 @@ cv::Mat recursive_label(cv::Mat& b_img) {
             // new object discovered
             if (neg_b.at<schar>(row, col) == -1) {
                 // cout << "pixel @ " << row << ", " << col << endl;
-                count++; 
+                count++;
                 pixel_stack.push(std::make_pair(row, col));
                 while (! pixel_stack.empty()) {
                     // retrieve top entry, remove from stack
@@ -139,7 +143,7 @@ void erosion(cv::Mat& b_img, cv::Mat& dst, cv::Mat& mask) {
     }
 
     if (dst.empty()) {
-        // check this 
+        // check this
         dst = b_img.clone();
     }
 
@@ -150,11 +154,11 @@ void erosion(cv::Mat& b_img, cv::Mat& dst, cv::Mat& mask) {
     if (mask.empty()) {
         cerr << "No structuring element provided." << endl;
     }
-    
+
     if (mask.rows > b_img.rows || mask.cols > b_img.cols) {
         cerr << "Structuring element too large.";
     }
-    
+
     // ignoring boundaries on bottom
     for (int row = 0; row < b_img.rows - mask.rows + 1; row++) {
         // ignoring boundaries on the right
@@ -167,7 +171,7 @@ void erosion(cv::Mat& b_img, cv::Mat& dst, cv::Mat& mask) {
                 dst.at<schar>(row, col) = 0;
             }
 
-            
+
         }
 
     }
@@ -209,7 +213,7 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
         cerr << "No source image provided." << endl;
     }
     if (dst.empty()) {
-        dst = cv::Mat::zeros(src.size(), CV_16UC1);
+        dst = cv::Mat::zeros(src.rows, src.cols, CV_16UC1);
     }
     if (dst.size() != src.size()) {
         cerr << "Source and destination images are different sizes." << endl;
@@ -218,7 +222,7 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
     cv::Mat search_img = src.clone();
     for (int row = 0; row < src.rows; row++) {
         for (int col = 0; col < src.cols; col++) {
-            int value = search_img.at<uchar>(row, col); // looking for non-zero boundaries. 
+            int value = search_img.at<uchar>(row, col); // looking for non-zero boundaries.
             if (value != 0) {
                 // location for first boundary pixel
                 std::vector<std::pair<int , int> > border; // vector of pixels for border
@@ -228,36 +232,39 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
 
 
                 // Get 4 neighbors to find edge of boundary.
-                std::pair<int, int> b_pxl; // background pixel 
+                std::pair<int, int> b_pxl; // background pixel
                 std::vector<std::pair<int, int> > background_neighbors;
                 background_neighbors = get_n4(row, col, src.rows, src.cols);
 
-                // find background pixel 
+                // find background pixel
                 for (int i = 0; i < background_neighbors.size(); i++) {
-                    b_pxl = background_neighbors[i];   
+                    b_pxl = background_neighbors[i];
                     if (search_img.at<uchar>(b_pxl.first, b_pxl.second) == 0) {
                         break;
                     }
                 }
-                
-                // start search for boundary at current pixel. 
+
+                // start search for boundary at current pixel.
                 int search_row = border[0].first;
                 int start_col = border[0].second;
                 bool begin_search = true;
+                cout << search_img.size() << endl;
+                cout << "c_pxl: " << c_pxl.first << ", " << c_pxl.second << endl;
                 while ((begin_search) || c_pxl != border[0]) {
                     begin_search = false; // set to false once inside while loop.
-                    
+                    cout << "c_pxl: " << c_pxl.first << ", " << c_pxl.second << endl;
+
                     std::vector<std::pair<int, int> > n8; // vector containing neighbor pixels in clockwise order.
-                    
+
                     // get clockwise 8 neighborhood
                     n8 = clockwise_n8(c_pxl.first, c_pxl.second, src.rows, src.cols);
-                    
-                    // need to start search at background pixel `b_pxl`, find `b_pxl`. 
+
+                    // need to start search at background pixel `b_pxl`, find `b_pxl`.
                     int search_idx = 0; // index of neighbor vector
                     while (n8[search_idx] != b_pxl) {
                         search_idx++;
                     }
-                    
+
                     // search starting at `b_pxl`.
                     bool next_pxl = false; // whether boundary pixel has been found.
                     while (! next_pxl) {
@@ -290,7 +297,7 @@ void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int val
     }
 }
 
-// Return clockwise n4 of a pixel starting from the west. 
+// Return clockwise n4 of a pixel starting from the west.
 std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n_cols) {
     std::vector<std::pair<int, int> > n4;
     if (c_col - 1 >= 0) {
@@ -305,7 +312,7 @@ std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n
     if (c_row + 1 < n_rows) {
         n4.push_back(std::pair<int, int>(c_row + 1, c_col));
     }
-    return n4; 
+    return n4;
 }
 
 
@@ -349,10 +356,10 @@ void print_vector_of_pairs(std::vector<std::pair<int, int> > v_of_p) {
     for (int i = 0; i < v_of_p.size(); i++) {
         cout << "(" << v_of_p[i].first << ", " << v_of_p[i].second << ")" << endl;
     }
-} 
+}
 
 
-// convert integer labels to color values. 
+// convert integer labels to color values.
 cv::Mat color_labels(cv::Mat& label_img) {
     cv::Mat colored = cv::Mat(label_img.rows, label_img.cols, CV_8UC3,
                               cv::Scalar(255, 255, 255));
