@@ -17,14 +17,14 @@ int main(int argc, char * argv[]) {
     using ::std::endl;
     // cv2::imread("../BinaryImages/open-bw-full.png", "")
     cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/open-bw-partial.png",
+    open_full = cv::imread("../BinaryImages/test_img.jpg",
                            cv::IMREAD_GRAYSCALE);
     // cv::Mat b_img = binarize_image(open_full); // this is probably losing the info.
 
-    std::vector<std::pair<int, int> > n8_test = clockwise_n8(3, 3, 5, 5);
-    // print_vector_of_pairs(n8_test);
     cv::Mat b_img;
     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
+    std::vector<std::pair<std::pair<int, int>, int> > n8_test = clockwise_n8(b_img, 0, 0);
+    print_vector_of_pairs(n8_test);
     cv::Mat eroded;
     cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
     erosion(b_img, eroded, mask);
@@ -33,6 +33,7 @@ int main(int argc, char * argv[]) {
     cv::Mat eroded_color = color_labels(eroded);
     cv::Mat borders;
     find_boundary(labelled, borders);
+    cv::Mat colored_borders = color_labels(borders);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
     cv::imshow("open-bw-full", open_full);
     cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
@@ -41,7 +42,7 @@ int main(int argc, char * argv[]) {
     cv::namedWindow("colored-eroded", cv::WINDOW_AUTOSIZE);
     cv::imshow("colored-eroded", eroded_color);
     cv::namedWindow("colored-borders", cv::WINDOW_AUTOSIZE);
-    cv::imshow("colored-borders", borders);
+    cv::imshow("colored-borders", colored_borders);
     cv::waitKey(0);
     return 0;
 }
@@ -220,10 +221,12 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
     }
     std::vector<std::vector<std::pair<int, int> > > boundaries;
     cv::Mat search_img = src.clone();
+    bool one_boundary = false;
     for (int row = 0; row < src.rows; row++) {
         for (int col = 0; col < src.cols; col++) {
             int value = search_img.at<uchar>(row, col); // looking for non-zero boundaries.
-            if (value != 0) {
+            if (value != 0 && ! one_boundary) {
+                cout << "starting boundary search." << endl;
                 // location for first boundary pixel
                 std::vector<std::pair<int , int> > border; // vector of pixels for border
                 std::pair<int, int> c_pxl; // current border pixel
@@ -248,45 +251,45 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
                 int search_row = border[0].first;
                 int start_col = border[0].second;
                 bool begin_search = true;
-                cout << search_img.size() << endl;
-                cout << "c_pxl: " << c_pxl.first << ", " << c_pxl.second << endl;
                 while ((begin_search) || c_pxl != border[0]) {
                     begin_search = false; // set to false once inside while loop.
-                    cout << "c_pxl: " << c_pxl.first << ", " << c_pxl.second << endl;
 
-                    std::vector<std::pair<int, int> > n8; // vector containing neighbor pixels in clockwise order.
+                    // vector containing neighbor pixels in clockwise order.
+                    std::vector<std::pair<std::pair<int, int>, int> > n8; 
 
-                    // get clockwise 8 neighborhood
-                    n8 = clockwise_n8(c_pxl.first, c_pxl.second, src.rows, src.cols);
+                    // get clockwise 8 neighborhood, vector of pairs with pixel
+                    // locations and values. 
+                    n8 = clockwise_n8(search_img, c_pxl.first, c_pxl.second);
 
                     // need to start search at background pixel `b_pxl`, find `b_pxl`.
                     int search_idx = 0; // index of neighbor vector
-                    while (n8[search_idx] != b_pxl) {
+                    while (n8[search_idx].first != b_pxl) {
                         search_idx++;
                     }
 
                     // search starting at `b_pxl`.
                     bool next_pxl = false; // whether boundary pixel has been found.
                     while (! next_pxl) {
-                        int n8_row = n8[search_idx % n8.size()].first;
-                        int n8_col = n8[search_idx % n8.size()].second;
-                        next_pxl = (search_img.at<uchar>(n8_row, n8_col) == value);
+                        std::pair<int, int> s_pxl = n8[search_idx % n8.size()].first;
+                        int s_value =  n8[search_idx % n8.size()].second;
+                        next_pxl = (s_value == value);
                         if (next_pxl) {
                             // assign current pixel to matched value
-                            c_pxl = n8[search_idx % n8.size()];
-                            b_pxl = n8[(search_idx -1) % n8.size()];
+                            c_pxl = s_pxl;
+                            b_pxl = n8[(search_idx -1) % n8.size()].first;
                             border.push_back(c_pxl);
                         }
                         search_idx++;
                     }
                 }
                 draw_border(dst, border, value);
-                draw_border(search_img, border, 0);
+                // draw_border(search_img, border, 0);
                 boundaries.push_back(border);
                 // draw onto dst
                 // remove from search img.
-
+                one_boundary = true;
             }
+            
         }
     }
 }
@@ -316,45 +319,88 @@ std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n
 }
 
 
-std::vector<std::pair<int, int> > clockwise_n8(int c_row, int c_col, int n_rows, int n_cols) {
-    std::vector<std::pair<int, int> > n8;
+std::vector<std::pair<std::pair<int, int>, int> > clockwise_n8(cv::Mat& img, int c_row, int c_col) {
+    std::vector<std::pair<std::pair<int, int>, int> > n8;
     bool left = c_col - 1 >= 0;
     bool up = c_row - 1 >= 0;
-    bool right = c_col + 1 < n_cols;
-    bool down = c_row + 1 < n_rows;
+    bool right = c_col + 1 < img.cols;
+    bool down = c_row + 1 < img.rows;
+    std::pair<int, int> coords;
+    std::pair<std::pair<int, int>, int> pixel;
 
+    // West neighbor
+    pixel.first = std::make_pair(c_row, c_col - 1);
+    pixel.second = 0;
     if (left) {
-        n8.push_back(std::pair<int, int>(c_row, c_col - 1));
+        pixel.second = img.at<uchar>(c_row, c_col - 1);
     }
+    n8.push_back(pixel); 
+
+    // Northwest neighbor
+    pixel.first = std::make_pair(c_row -1, c_col - 1);
+    pixel.second = 0;
     if (left && up) {
-        n8.push_back(std::pair<int, int>(c_row - 1, c_col - 1));
+        pixel.second = img.at<uchar>(c_row - 1, c_col - 1);
     }
+    n8.push_back(pixel);
+    
+    // North neighbor
+    pixel.first = std::make_pair(c_row -1 , c_col);
+    pixel.second = 0;
     if (up) {
-        n8.push_back(std::pair<int, int>(c_row - 1, c_col));
+        pixel.second = img.at<uchar>(c_row - 1, c_col);
     }
+    n8.push_back(pixel);
+
+    // Northeast neighbor
+    pixel.first = std::make_pair(c_row - 1, c_col + 1);
+    pixel.second = 0;
     if (up && right) {
-        n8.push_back(std::pair<int, int>(c_row - 1, c_col + 1));
+        pixel.second = img.at<uchar>(c_row - 1, c_col + 1);
     }
+    n8.push_back(pixel);
+
+    // East neighbor
+    pixel.first = std::make_pair(c_row, c_col + 1);
+    pixel.second = 0;
     if (right) {
-        n8.push_back(std::pair<int, int>(c_row, c_col + 1));
+        pixel.second = img.at<uchar>(c_row, c_col + 1);
     }
+    n8.push_back(pixel);
+
+    // Southeast neighbor
+    pixel.first = std::make_pair(c_row + 1, c_col + 1);
+    pixel.second = 0;
     if (down && right) {
-        n8.push_back(std::pair<int, int>(c_row + 1, c_col + 1));
+        pixel.second = img.at<uchar>(c_row + 1, c_col + 1);
     }
+    n8.push_back(pixel);
+
+    // South neighbor
+    pixel.first = std::make_pair(c_row + 1, c_col);
+    pixel.second = 0;
     if (down) {
-        n8.push_back(std::pair<int, int>(c_row + 1, c_col));
+        pixel.second = img.at<uchar>(c_row + 1, c_col);
     }
+    n8.push_back(pixel);
+
+    // Southeast neighbor
+    pixel.first = std::make_pair(c_row + 1, c_col -1);
+    pixel.second = 0;
     if (down && left) {
-        n8.push_back(std::pair<int, int>(c_row + 1, c_col - 1));
+        pixel.second = img.at<uchar>(c_row + 1, c_col - 1);
     }
     return n8;
 }
 
-void print_vector_of_pairs(std::vector<std::pair<int, int> > v_of_p) {
+void print_vector_of_pairs(std::vector<std::pair<std::pair<int, int>, int> > v_of_p) {
     using ::std::cout;
     using ::std::endl;
+    
     for (int i = 0; i < v_of_p.size(); i++) {
-        cout << "(" << v_of_p[i].first << ", " << v_of_p[i].second << ")" << endl;
+        std::pair<int, int> pixel = v_of_p[i].first;
+        int value = v_of_p[i].second;
+        cout << "(" << pixel.first << ", " << pixel.second << ") = " << value << endl;
     }
 }
 

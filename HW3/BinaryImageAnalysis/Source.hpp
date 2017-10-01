@@ -88,7 +88,7 @@ void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int val
 /*
 Print vector of integer pairs.
 */
-void print_vector_of_pairs(std::vector<std::pair<int, int> > v_of_p);
+void print_vector_of_pairs(std::vector<std::pair<std::pair<int, int>, int> > v_of_p);
 
 
 /*
@@ -108,15 +108,17 @@ std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n
 /*
 Get N8 of a pixel. 
 
-Returns a vector of pairs. Each pair is a pixel. Clockwise rotation starts West
-and ends South West. If a pixel lays outside of image boundaries, it is ignored. 
+Returns a vector of pairs mapping pixels to pixel values. Each pair is a pair of 
+row column coordinates for a pixel along with its associated value.Clockwise
+rotation starts West and ends South West. If a pixel lays outside of image
+boundaries, the value is set to 0 to allow tracing around image borders. 
 
 @param c_row(int): current row.
 @param c_col(int): current column.
 @param n_rows(int): total number of rows in image.
 @param n_cols(int): total number of columns in image.
 */
-std::vector<std::pair<int, int> > clockwise_n8(int c_row, int c_col, int n_rows, int n_cols);
+std::vector<std::pair<std::pair<int, int>, int> > clockwise_n8(cv::Mat& img, int c_row, int c_col);
 
 
 /*
