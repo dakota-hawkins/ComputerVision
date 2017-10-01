@@ -21,8 +21,8 @@ int main(int argc, char * argv[]) {
                            cv::IMREAD_GRAYSCALE);
     // cv::Mat b_img = binarize_image(open_full); // this is probably losing the info.
 
-    std::vector<std::pair<int, int> > n4_test = get_n4(3, 3, 5, 5);
-    print_vector_of_pairs(n4_test);
+    std::vector<std::pair<int, int> > n8_test = clockwise_n8(3, 3, 5, 5);
+    print_vector_of_pairs(n8_test);
     cv::Mat b_img;
     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
     cv::Mat eroded;
@@ -273,11 +273,20 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
                         search_idx++;
                     }
                 }
+                draw_border(dst, border, value);
+                draw_border(search_img, border, 0);
+                boundaries.push_back(border);
                 // draw onto dst
                 // remove from search img.
 
             }
         }
+    }
+}
+
+void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value) {
+    for (int i = 0; i < border.size(); i++) {
+        dst.at<uchar>(border[i].first, border[i].second) = value;
     }
 }
 

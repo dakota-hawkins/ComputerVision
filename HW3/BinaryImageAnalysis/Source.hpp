@@ -76,6 +76,16 @@ void find_boundary(cv::Mat& src, cv::Mat& dst);
 
 
 /*
+Trace borders within an image.
+
+@param dst(cv::Mat): image to draw borders onto. 
+@param border(std::vector<std::vector<std::pairs<int, int> > >): A vector
+    containing pairs denoting the pixels belonging to each border.
+@param value(int): value to draw along the border.
+*/
+void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value);
+
+/*
 Print vector of integer pairs.
 */
 void print_vector_of_pairs(std::vector<std::pair<int, int> > v_of_p);
@@ -107,6 +117,7 @@ and ends South West. If a pixel lays outside of image boundaries, it is ignored.
 @param n_cols(int): total number of columns in image.
 */
 std::vector<std::pair<int, int> > clockwise_n8(int c_row, int c_col, int n_rows, int n_cols);
+
 
 /*
 Binarize image by converting 255's to 0 and 0's to 1's. 
