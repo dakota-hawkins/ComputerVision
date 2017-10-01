@@ -29,101 +29,6 @@ Retrieve the 8-neighborhood of a given pixel.
 */
 std::vector<std::pair<int, int> > get_neighbors(cv::Mat& img, int y, int x);
 
-/*
-Label connected regions in a binary image.
-
-Performs the Sequential Labelling Algorithm as described in class and here
-(https://en.wikipedia.org/wiki/Connected-component_labeling#Sequential_algorithm)
-
-@param b_img(cv::Mat): binary image to label connected components over.
-
-@return (cv::Mat): labelled image with 
-*/
-cv::Mat sequential_label(cv::Mat& b_img);
-
-
-/*
-Set equivalency between labels.
-
-Used in `sequential_label()` to group connected objects together. Searches
-vector of sets for `label1` or `label2` membership. If either are present, add
-missing element to set. Create new vector entry otherwise. 
-
-@param class_vec(std::vector<std::set<int> >): vector containing each
-    equivalence class represented as a set. Sets contain integer labels for each
-    label belonging to the same equivalence class.
-@param label1(int): integer label.
-@param label2(int): integer label.
-@return Void.
-*/
-void set_equivalencies(std::vector<std::set<int> > & class_vec, int label1, int label2);
-
-
-/*
-Get class label for a provided label.
-
-Searches a vector of sets to look for `label`'s membership. Upon match, returns
-vector index + 1 to represent specific class. If element does not belong to a
-set, return 0.
-
-@param class_vec(std::vector<std::set<int> >): vector containing each
-    equivalence class represented as a set. Sets contain integer labels for each
-    label belonging to the same equivalence class.
-@param label(int): integer label.
-@return (int): label indicating which equivalency class `label` belongs to. 
-*/
-int get_equivalency(std::vector<std::set<int> >& class_vec, int label);
-
-
-/*
-Merge two sets in a vector of sets together.
-
-@param class_vec(std::vector<std::set<int> >): vector containing each
-    equivalence class represented as a set. Sets contain integer labels for each
-    label belonging to the same equivalence class.
-@param set1_idx(int): vector index for the first set.
-@param set2_idx(int): vector index for the second set. 
-*/
-void merge_classes(std::vector<std::set<int> >& class_vec,
-                   int set1_idx, int set2_idx);
-
-
-/*
-print a set of integers.
-
-@param int_set(std::set<int>): set of integers to print.
-*/
-void print_set(std::set<int> int_set);
-void inline print_set(std::set<int> int_set) {
-    using ::std::cout;
-    std::set<int>::iterator it = int_set.begin();
-    cout << "{";
-    for (it; it != int_set.end(); it++) {
-        cout << *it << ", ";
-    }
-    cout << "}\n";
-}
-
-/*
-Add new class to vector of equivlanecy classes.
-
-@param class_vec(std::vector<std::set<int> >): vector containing each
-    equivalence class represented as a set. Sets contain integer labels for each
-    label belonging to the same equivalence class
-@param elements(int array): array of new values to add to set.
-@param n(int): number of elements being added. 
-*/
-void add_class(std::vector<std::set<int> >& class_vec, int elements[], int n);
-
-/*
-Print vector of sets to terminal.
-
-@param class_vec(std::vector<std::set<int> >): vector containing each
-    equivalence class represented as a set. Sets contain integer labels for each
-    label belonging to the same equivalence class.
-*/
-void print_equivalence_classes(std::vector<std::set<int> >& class_vec);
-
 
 /*
 Map labeled image subsections to unique colors for display.
@@ -134,6 +39,84 @@ Map labeled image subsections to unique colors for display.
 @return (cv::Mat): RGB image with colored labels. 
 */
 cv::Mat color_labels(cv::Mat& label_img);
+
+
+/*
+Performs erosion over an image given a particular structuring element.
+
+@param b_img(cb__mat): binary image.
+@param dst(cv::Mat): output image to write to. 
+@param mask(cv::Mat): binary structuring element
+@return void
+*/
+void erosion(cv::Mat& b_img, cv::Mat& dst, cv::Mat& mask);
+
+
+/*
+Erode a sub image using a given structuring element. 
+
+@param sub_image(cv::Mat): (n x n) binary sub-image.
+@param mask(cv::Mat): (n x n) binary structuring element.
+@param value(int, optional): value to check for. Default is 1. 
+
+@return (int): `value` if all pixels in sub-image equal `value`, 0 otherwise.
+*/
+int erode(cv::Mat& sub_image, cv::Mat& mask, int value = 1);
+
+
+/*
+Trace boundary of objects within an image.
+
+@param src(cv::Mat): source image.
+@param dst(cv::Mat): destination image.
+
+@return void.
+*/
+void find_boundary(cv::Mat& src, cv::Mat& dst);
+
+
+/*
+Trace borders within an image.
+
+@param dst(cv::Mat): image to draw borders onto. 
+@param border(std::vector<std::vector<std::pairs<int, int> > >): A vector
+    containing pairs denoting the pixels belonging to each border.
+@param value(int): value to draw along the border.
+*/
+void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value);
+
+/*
+Print vector of integer pairs.
+*/
+void print_vector_of_pairs(std::vector<std::pair<int, int> > v_of_p);
+
+
+/*
+Get N4 of a pixel in clockwise order starting from the West.
+
+Returns the 4-neighbor for a given pixel. Neighbors outside of image boundaries
+will be ignored.
+
+@param c_row(int): current row.
+@param c_col(int): current column.
+@param n_rows(int): total number of rows in image.
+@param n_cols(int): total number of columns in image.
+*/
+std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n_cols);
+
+
+/*
+Get N8 of a pixel. 
+
+Returns a vector of pairs. Each pair is a pixel. Clockwise rotation starts West
+and ends South West. If a pixel lays outside of image boundaries, it is ignored. 
+
+@param c_row(int): current row.
+@param c_col(int): current column.
+@param n_rows(int): total number of rows in image.
+@param n_cols(int): total number of columns in image.
+*/
+std::vector<std::pair<int, int> > clockwise_n8(int c_row, int c_col, int n_rows, int n_cols);
 
 
 /*
