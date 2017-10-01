@@ -17,22 +17,19 @@ int main(int argc, char * argv[]) {
     using ::std::endl;
     // cv2::imread("../BinaryImages/open-bw-full.png", "")
     cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/test_img.jpg",
+    open_full = cv::imread("../BinaryImages/open-bw-full.png",
                            cv::IMREAD_GRAYSCALE);
-    // cv::Mat b_img = binarize_image(open_full); // this is probably losing the info.
-
     cv::Mat b_img;
     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
-    std::vector<std::pair<std::pair<int, int>, int> > n8_test = clockwise_n8(b_img, 0, 0);
-    print_vector_of_pairs(n8_test);
     cv::Mat eroded;
     cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
     erosion(b_img, eroded, mask);
     cv::Mat labelled = recursive_label(eroded);
     cv::Mat colored_full = color_labels(labelled);
     cv::Mat eroded_color = color_labels(eroded);
-    cv::Mat borders;
-    find_boundary(labelled, borders);
+    cv::Mat borders = cv::Mat::zeros(labelled.size(), CV_8UC1);
+    std::vector<std::pair<int, int> > border = find_boundary(labelled);
+    draw_border(borders, border, 1);
     cv::Mat colored_borders = color_labels(borders);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
     cv::imshow("open-bw-full", open_full);
@@ -205,7 +202,7 @@ int erode(cv::Mat& sub_image, cv::Mat& mask, int value) {
 }
 
 
-void find_boundary(cv::Mat& src, cv::Mat& dst) {
+std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
     using ::std::cerr;
     using ::std::endl;
     using ::std::cout;
@@ -213,13 +210,8 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
     if (src.empty()) {
         cerr << "No source image provided." << endl;
     }
-    if (dst.empty()) {
-        dst = cv::Mat::zeros(src.rows, src.cols, CV_16UC1);
-    }
-    if (dst.size() != src.size()) {
-        cerr << "Source and destination images are different sizes." << endl;
-    }
-    std::vector<std::vector<std::pair<int, int> > > boundaries;
+
+    std::vector<std::pair<int , int> > border; // vector of pixels for border
     cv::Mat search_img = src.clone();
     bool one_boundary = false;
     for (int row = 0; row < src.rows; row++) {
@@ -228,7 +220,6 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
             if (value != 0 && ! one_boundary) {
                 cout << "starting boundary search." << endl;
                 // location for first boundary pixel
-                std::vector<std::pair<int , int> > border; // vector of pixels for border
                 std::pair<int, int> c_pxl; // current border pixel
                 c_pxl = std::make_pair(row, col);
                 border.push_back(c_pxl);
@@ -282,16 +273,12 @@ void find_boundary(cv::Mat& src, cv::Mat& dst) {
                         search_idx++;
                     }
                 }
-                draw_border(dst, border, value);
-                // draw_border(search_img, border, 0);
-                boundaries.push_back(border);
-                // draw onto dst
-                // remove from search img.
                 one_boundary = true;
             }
             
         }
     }
+    return border;
 }
 
 void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value) {

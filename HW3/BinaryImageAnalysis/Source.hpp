@@ -68,11 +68,9 @@ int erode(cv::Mat& sub_image, cv::Mat& mask, int value = 1);
 Trace boundary of objects within an image.
 
 @param src(cv::Mat): source image.
-@param dst(cv::Mat): destination image.
-
-@return void.
+@return (vector<pair<int, int> >): vector of pixels making up boundary.
 */
-void find_boundary(cv::Mat& src, cv::Mat& dst);
+std::vector<std::pair<int , int> > find_boundary(cv::Mat& src);
 
 
 /*
