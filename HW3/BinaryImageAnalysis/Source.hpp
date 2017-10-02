@@ -112,6 +112,22 @@ https://en.wikipedia.org/wiki/Image_moment
 */
 std::map<std::string, double> calculate_statistics(cv::Mat& img);
 
+/*
+Convert a labeled image to a vector of images.
+
+Returns a length `n_labels` vector containing binary images. Each binary image
+is an isolated labelled image. For N labeled objects, each object is expected
+to be denoted by the unique pixel value x where x in {1, 2, 3, ... , N}. 
+
+@param label_img (cv::Mat): labeled image. Usually output from
+`recursive_label()`.
+@param n_labels: number of labeled objects in `label_img`
+
+@return vector<cv::Mat>: vector of binary images with previously labeled images
+separated from each other and plotted onto unique matrices. 
+*/
+std::vector<cv::Mat> label_img_to_vector(cv::Mat& label_img, int n_labels);
+
 
 /*
 Print vector of integer pairs.

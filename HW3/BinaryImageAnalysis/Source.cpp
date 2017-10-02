@@ -31,11 +31,14 @@ int main(int argc, char * argv[]) {
     cv::Mat eroded;
     cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
     erosion(b_img, eroded, mask);
-    cv::Mat labelled = recursive_label(eroded);
+    cv::Mat labelled; 
+    int n_labels = recursive_label(eroded, labelled);
+    std::vector<cv::Mat> label_vec = label_img_to_vector(labelled, n_labels);
+    cout << "labeled objects: " << n_labels << endl;
     cv::Mat colored_full = color_labels(labelled);
     cv::Mat eroded_color = color_labels(eroded);
     cv::Mat borders = cv::Mat::zeros(labelled.size(), CV_8UC1);
-    std::vector<std::pair<int, int> > border = find_boundary(labelled);
+    std::vector<std::pair<int, int> > border = find_boundary(label_vec[1]);
     draw_border(borders, border, 1);
     cv::Mat colored_borders = color_labels(borders);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
@@ -54,9 +57,22 @@ int main(int argc, char * argv[]) {
 }
 
 
-cv::Mat recursive_label(cv::Mat& b_img) {
+int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
     using ::std::cout;
     using ::std::endl;
+
+    if (b_img.empty()) {
+        std::cerr << "Binary image is empty.";
+    }
+
+    if (dst.empty()) {
+        dst = cv::Mat::zeros(b_img.rows, b_img.cols, CV_8UC1);
+
+    }
+
+    if (dst.size() != b_img.size()) {
+        std::cerr << "Binary image and labelled image must have equal dimensions.";
+    }
 
     cv::Mat neg_b = cv::Mat::zeros(b_img.rows, b_img.cols, CV_16SC1);
     std::stack<std::pair<int, int> > pixel_stack;
@@ -70,44 +86,31 @@ cv::Mat recursive_label(cv::Mat& b_img) {
         }
     }
 
-    // find entry to be labelled.
-
+    // find entries to be labelled.
     for (int row = 0; row < neg_b.rows; row++) {
         for (int col = 0; col < neg_b.cols; col++) {
             // push unlabeled pixel onto stack
             // new object discovered
             if (neg_b.at<schar>(row, col) == -1) {
-                // cout << "pixel @ " << row << ", " << col << endl;
                 count++;
                 pixel_stack.push(std::make_pair(row, col));
                 while (! pixel_stack.empty()) {
                     // retrieve top entry, remove from stack
                     std::pair<int, int> pixel = pixel_stack.top();
-                    // cout << "top: " << pixel.first << ", " << pixel.second << endl;
                     pixel_stack.pop();
                     // label current pixel
-                    // cout << "old value: " << int(neg_b.at<schar>(pixel.first, pixel.second)) << endl;
                     neg_b.at<schar>(pixel.first, pixel.second) = count;
-                    // cout << "value: " << int(neg_b.at<schar>(pixel.first, pixel.second)) << endl;
 
                     // get all possible pixels in 8 neighbor.
                     std::vector<std::pair<int, int> > neighbors;
                     neighbors = get_neighbors(neg_b, pixel.first, pixel.second);
-                    // if (pixel.first == 16) {
-                    //     cout << "original: " << pixel.first << ", " << pixel.second << endl;
-                    //     cout << "dims = " << neg_b.rows << ", " << neg_b.cols << endl;
-                    //     cout << "neighbors:" << endl;
-                    //     for (int k = 0; k < neighbors.size(); k++) {
-                    //         cout << '\t' << "y = " << neighbors[k].first << ", x = " << neighbors[k].second << endl;
-                    //     }
-                    //     cout << endl;
-                    // }
                     for (int i = 0; i < neighbors.size(); i++) {
                         std::pair<int, int> curr_neighbor = neighbors[i];
                         // label unlabled neighbors, throw on stack to check
                         // other neighbors.
                         if (neg_b.at<schar>(curr_neighbor.first, curr_neighbor.second) == -1) {
                             neg_b.at<schar>(curr_neighbor.first, curr_neighbor.second) = count;
+                            dst.at<uchar>(curr_neighbor.first, curr_neighbor.second) = count;
                             pixel_stack.push(curr_neighbor);
                         }
                     }
@@ -116,9 +119,8 @@ cv::Mat recursive_label(cv::Mat& b_img) {
             }
         }
     }
-    std::cout << "labels: " << count << std::endl;
-    cout << "value: " << int(neg_b.at<schar>(16, 399)) << endl;
-    return neg_b;
+
+    return count;
 }
 
 
@@ -463,6 +465,22 @@ void skelatonize(cv::Mat& src, cv::Mat& skelaton) {
         }
     }
     
+}
+
+std::vector<cv::Mat> label_img_to_vector(cv::Mat& label_img, int n_labels) {
+    std::vector<cv::Mat> mat_vec;
+    for (int label = 1; label < n_labels + 1; label++) {
+        cv::Mat c_img = cv::Mat::zeros(label_img.size(), CV_8UC1);
+        for (int row = 0; row < label_img.rows; row++) {
+            for (int col = 0; col < label_img.cols; col++) {
+                if (label_img.at<uchar>(row, col) == label) {
+                    c_img.at<uchar>(row, col) = 1;
+                }
+            }
+        }
+        mat_vec.push_back(c_img);
+    }
+    return mat_vec;
 }
 
 // convert integer labels to color values.
