@@ -17,10 +17,17 @@ int main(int argc, char * argv[]) {
     using ::std::endl;
     // cv2::imread("../BinaryImages/open-bw-full.png", "")
     cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/open-bw-full.png",
+    open_full = cv::imread("../BinaryImages/test_img.jpg",
                            cv::IMREAD_GRAYSCALE);
     cv::Mat b_img;
+    cv::Mat skel_test;
     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
+    skelatonize(b_img, skel_test);
+    cv::Mat color_skel = color_labels(skel_test);
+    std::map<std::string, double> stats = calculate_statistics(b_img);
+    cout << "Area: " << stats["area"] << endl;
+    cout << "Theta: " << stats["theta"] << endl;
+    cout << "Circularity: " << stats["circ"] << endl;
     cv::Mat eroded;
     cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
     erosion(b_img, eroded, mask);
@@ -40,6 +47,8 @@ int main(int argc, char * argv[]) {
     cv::imshow("colored-eroded", eroded_color);
     cv::namedWindow("colored-borders", cv::WINDOW_AUTOSIZE);
     cv::imshow("colored-borders", colored_borders);
+    cv::namedWindow("skelaton", cv::WINDOW_AUTOSIZE);
+    cv::imshow("skelaton", color_skel);
     cv::waitKey(0);
     return 0;
 }
@@ -391,6 +400,70 @@ void print_vector_of_pairs(std::vector<std::pair<std::pair<int, int>, int> > v_o
     }
 }
 
+std::map<std::string, double> calculate_statistics(cv::Mat& img) {
+    std::map<std::string, double> stats;
+    cv::Moments moments = cv::moments(img, true);
+    // Calculate area
+    stats["area"] = moments.m00;
+
+    // Calculate orientation
+    double x_bar = moments.m10/moments.m00;
+    double y_bar = moments.m01/moments.m00;
+    double mu_11 = moments.m11/moments.m00 - x_bar * y_bar;
+    double mu_20 = moments.m20/moments.m00 - x_bar * x_bar;
+    double mu_02 = moments.m20/moments.m00 - y_bar * y_bar;
+    stats["theta"] = 0.5 * std::atan((2.0 * mu_11) / (mu_20 - mu_02));
+
+    // Calculate e_min and e_max => circularity
+    double first_term = (moments.m20 + moments.m02) / (moments.m11);
+    double second_term = (moments.m20 - moments.m02) / (moments.m11);
+    double denom = std::sqrt(std::pow(moments.m20 - moments.m02, 2) +
+                             std::pow(moments.m11, 2));
+    double third_term = (moments.m20 - moments.m02) / denom;
+    double fourth_term = moments.m11/2.0 * (moments.m11/denom);
+    double e_min = first_term - second_term * third_term - fourth_term;
+    double e_max = first_term + second_term * third_term + fourth_term;
+    stats["circ"] = e_min/e_max;
+    
+    return stats;
+
+}
+
+void skelatonize(cv::Mat& src, cv::Mat& skelaton) {
+    using ::std::cerr;
+    using ::std::cout;
+    using ::std::endl;
+
+    if (skelaton.empty()) {
+        skelaton = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
+    }
+    cv::Mat dist_mat;
+    cv::distanceTransform(src, dist_mat, CV_DIST_L1, 3);
+    dist_mat.convertTo(dist_mat, CV_8UC1); // weird
+    
+    for (int row = 0; row < src.rows; row++) {
+        for (int col = 0; col < src.cols; col++) {
+            if (src.at<uchar>(row, col) != 0) {
+                std::vector<std::pair<int, int> > c_n4 = get_n4(row, col, src.rows, src.cols);
+                double max_distance = 0;
+                std::pair<int, int> c_pxl;
+                for (int i = 0 ; i < c_n4.size(); i++) {
+                    c_pxl = c_n4[i];
+                    double dist = dist_mat.at<uchar>(c_pxl.first, c_pxl.second);
+                    if (dist > max_distance) {
+                        max_distance = dist_mat.at<uchar>(c_pxl.first, c_pxl.second);
+                    }
+                }
+                if (dist_mat.at<uchar>(row, col) >= max_distance) {
+                    skelaton.at<uchar>(row, col) = src.at<uchar>(row, col);
+                } else {
+                    skelaton.at<uchar>(row, col) = 0;
+                }
+            }
+        }
+    }
+    
+}
 
 // convert integer labels to color values.
 cv::Mat color_labels(cv::Mat& label_img) {

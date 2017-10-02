@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <stack>
+#include <math.h>
 
 // OpenCv library
 #include "opencv2/core/core.hpp"
@@ -13,12 +14,16 @@
 
 // Function declarations
 
+
 /*
 Label connected regions using the stacked recursive algorithm.
 
 @param b_img(cv::Mat): binary image to label connected components over.
+@param dst(cv::Mat): image to write boundaries to. 
+
+@ return (int): the number of labelled objects in the image. 
 */
-cv::Mat recursive_label(cv::Mat& b_img);
+int recursive_label(cv::Mat& b_img, cv::Mat& dst);
 
 
 /*
@@ -82,6 +87,31 @@ Trace borders within an image.
 @param value(int): value to draw along the border.
 */
 void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value);
+
+/*
+Retrieve the skelaton/medial axis of a binary image.
+
+@param src(cv::Mat): source image to find skelaton of.
+@param skelaton(cv::Mat): image to write skelaton to. 
+*/
+void skelatonize(cv::Mat& src, cv::Mat& skelaton);
+
+/*
+Calculates area, orientation, and circularity of a binary image.
+
+Mathematical properties pulled from wikipedia:
+https://en.wikipedia.org/wiki/Image_moment
+
+@param img(cv::Mat): image to calculate statistics with.
+
+@return (map<string, double>): a map containing the calculated statics.
+    key : value
+    "area" : area
+    "theta" : orientation
+    "circ" : circularity
+*/
+std::map<std::string, double> calculate_statistics(cv::Mat& img);
+
 
 /*
 Print vector of integer pairs.
