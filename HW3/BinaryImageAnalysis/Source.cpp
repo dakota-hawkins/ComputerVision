@@ -17,7 +17,7 @@ int main(int argc, char * argv[]) {
     using ::std::endl;
     // cv2::imread("../BinaryImages/open-bw-full.png", "")
     cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/test_img.jpg",
+    open_full = cv::imread("../BinaryImages/open-bw-partial.png",
                            cv::IMREAD_GRAYSCALE);
     cv::Mat b_img;
     cv::Mat skel_test;
@@ -34,13 +34,25 @@ int main(int argc, char * argv[]) {
     cv::Mat labelled; 
     int n_labels = recursive_label(eroded, labelled);
     std::vector<cv::Mat> label_vec = label_img_to_vector(labelled, n_labels);
+    cv::Mat all_boarders = cv::Mat::zeros(label_vec[0].size(), CV_8UC1);
+    cv::Mat oi;
+    vector_to_img(oi, label_vec);
     cout << "labeled objects: " << n_labels << endl;
-    cv::Mat colored_full = color_labels(labelled);
+    for (int i = 0; i < label_vec.size(); i++) {
+        // std::vector<std::pair<int, int> > border = find_boundary(label_vec[i]);
+        // draw_border(all_boarders, border, 1);
+        cv::Mat colored_full = color_labels(label_vec[i]);
+        cout << i << endl;
+        cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
+        cv::imshow("colored_full", colored_full);
+        cv::waitKey(0);
+    }
+    cv::Mat colored_full = color_labels(label_vec[4]);
     cv::Mat eroded_color = color_labels(eroded);
     cv::Mat borders = cv::Mat::zeros(labelled.size(), CV_8UC1);
     std::vector<std::pair<int, int> > border = find_boundary(label_vec[1]);
     draw_border(borders, border, 1);
-    cv::Mat colored_borders = color_labels(borders);
+    cv::Mat colored_borders = color_labels(all_boarders);
     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
     cv::imshow("open-bw-full", open_full);
     cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
@@ -481,6 +493,25 @@ std::vector<cv::Mat> label_img_to_vector(cv::Mat& label_img, int n_labels) {
         mat_vec.push_back(c_img);
     }
     return mat_vec;
+}
+
+void vector_to_img(cv::Mat dst, std::vector<cv::Mat> img_vec) {
+    if (dst.empty()) {
+        dst = cv::Mat::zeros(img_vec[0].size(), CV_8UC1);
+    }
+    if (dst.size() != img_vec[0].size()) {
+        std::cerr << "Error: dimensions do not match.\n";
+    }
+    for (int i = 0; i < img_vec.size(); i++) {
+        for (int row = 0; row < img_vec[0].rows; row++) {
+            for (int col = 0; col < img_vec[0].cols; col++){
+                if (img_vec[i].at<uchar>(row, col) != 0) {
+                    dst.at<uchar>(row, col) = 1;
+                }
+            }
+        }
+    }
+
 }
 
 // convert integer labels to color values.

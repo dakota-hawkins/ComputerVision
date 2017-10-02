@@ -128,6 +128,16 @@ separated from each other and plotted onto unique matrices.
 */
 std::vector<cv::Mat> label_img_to_vector(cv::Mat& label_img, int n_labels);
 
+/*
+Convert a vector of images to a single image.
+
+Reverse of `label_img_to_vector()`. 
+
+@param dst(cv::Mat): image destination.
+@param img_vec(vector<cv::Mat>): vector of binary images. 
+*/
+void vector_to_img(cv::Mat dst, std::vector<cv::Mat> img_vec);
+
 
 /*
 Print vector of integer pairs.
