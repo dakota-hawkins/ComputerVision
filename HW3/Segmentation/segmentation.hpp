@@ -9,7 +9,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 
-/*
+/*!
 Perform adaptive thresholding on a given image. 
 
 @param img(cv::Mat): image to threshold.
@@ -25,7 +25,7 @@ void adaptive_threshold(cv::Mat& img, cv::Mat& dst, int mask_size, double C);
 
 
 
-/*
+/*!
 Perform double thresholding on a given image.
 
 @param img(cv::Mat): image to threshold.
@@ -37,7 +37,7 @@ Perform double thresholding on a given image.
 void double_threshold(cv::Mat& img, cv::Mat& dst, double thresh_1, double thresh_2);
 
 
-/*
+/*!
 Perform absolute thresholding on gray values.
 
 @param img(cv::Mat): image to threshold.
@@ -47,7 +47,7 @@ Perform absolute thresholding on gray values.
 */
 void simple_threshold(cv::Mat& img, cv::Mat& dst, double thresh, int val);
 
-/*
+/*!
 Get the euclidean distance between two gray values. 
 
 @param val1(int): first gray value to compare.
@@ -58,7 +58,7 @@ Get the euclidean distance between two gray values.
 double distance(int val1, int val2);
 
 
-/*
+/*!
 Get the euclidean distance between two BGR values.
 
 @param val1 (cv::Vec3b): first BGR value
