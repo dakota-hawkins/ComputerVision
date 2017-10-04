@@ -11,62 +11,62 @@ explanation:
 // no namespaces for clarity
 #include "banalysis.hpp"
 
-// Main function for binary image analysis.
-int main(int argc, char * argv[]) {
-    using ::std::cout;
-    using ::std::endl;
-    // cv2::imread("../BinaryImages/open-bw-full.png", "")
-    cv::Mat open_full;
-    open_full = cv::imread("../BinaryImages/open-bw-partial.png",
-                           cv::IMREAD_GRAYSCALE);
-    cv::Mat b_img;
-    cv::Mat skel_test;
-    cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
-    skelatonize(b_img, skel_test);
-    cv::Mat color_skel = color_labels(skel_test);
-    std::map<std::string, double> stats = calculate_statistics(b_img);
-    cout << "Area: " << stats["area"] << endl;
-    cout << "Theta: " << stats["theta"] << endl;
-    cout << "Circularity: " << stats["circ"] << endl;
-    cv::Mat eroded;
-    cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
-    erosion(b_img, eroded, mask);
-    cv::Mat labelled; 
-    int n_labels = recursive_label(eroded, labelled);
-    std::vector<cv::Mat> label_vec = label_img_to_vector(labelled, n_labels);
-    cv::Mat all_boarders = cv::Mat::zeros(label_vec[0].size(), CV_8UC1);
-    cv::Mat oi;
-    vector_to_img(oi, label_vec);
-    cout << "labeled objects: " << n_labels << endl;
-    for (int i = 0; i < label_vec.size(); i++) {
-        // std::vector<std::pair<int, int> > border = find_boundary(label_vec[i]);
-        // draw_border(all_boarders, border, 1);
-        cv::Mat colored_full = color_labels(label_vec[i]);
-        cout << i << endl;
-        cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
-        cv::imshow("colored_full", colored_full);
-        cv::waitKey(0);
-    }
-    cv::Mat colored_full = color_labels(label_vec[4]);
-    cv::Mat eroded_color = color_labels(eroded);
-    cv::Mat borders = cv::Mat::zeros(labelled.size(), CV_8UC1);
-    std::vector<std::pair<int, int> > border = find_boundary(label_vec[1]);
-    draw_border(borders, border, 1);
-    cv::Mat colored_borders = color_labels(all_boarders);
-    cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
-    cv::imshow("open-bw-full", open_full);
-    cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
-    //cv::setMouseCallback("colored_full", mouse_callback, &colored_full);
-    cv::imshow("colored_full", colored_full);
-    cv::namedWindow("colored-eroded", cv::WINDOW_AUTOSIZE);
-    cv::imshow("colored-eroded", eroded_color);
-    cv::namedWindow("colored-borders", cv::WINDOW_AUTOSIZE);
-    cv::imshow("colored-borders", colored_borders);
-    cv::namedWindow("skelaton", cv::WINDOW_AUTOSIZE);
-    cv::imshow("skelaton", color_skel);
-    cv::waitKey(0);
-    return 0;
-}
+// // Main function for binary image analysis.
+// int main(int argc, char * argv[]) {
+//     using ::std::cout;
+//     using ::std::endl;
+//     // cv2::imread("../BinaryImages/open-bw-full.png", "")
+//     cv::Mat open_full;
+//     open_full = cv::imread("../BinaryImages/open-bw-partial.png",
+//                            cv::IMREAD_GRAYSCALE);
+//     cv::Mat b_img;
+//     cv::Mat skel_test;
+//     cv::threshold(open_full, b_img, 5, 1, cv::THRESH_BINARY_INV);
+//     skelatonize(b_img, skel_test);
+//     cv::Mat color_skel = color_labels(skel_test);
+//     std::map<std::string, double> stats = calculate_statistics(b_img);
+//     cout << "Area: " << stats["area"] << endl;
+//     cout << "Theta: " << stats["theta"] << endl;
+//     cout << "Circularity: " << stats["circ"] << endl;
+//     cv::Mat eroded;
+//     cv::Mat mask = cv::Mat::ones(2, 2, CV_8UC1);
+//     erosion(b_img, eroded, mask);
+//     cv::Mat labelled; 
+//     int n_labels = recursive_label(eroded, labelled);
+//     std::vector<cv::Mat> label_vec = label_img_to_vector(labelled, n_labels);
+//     cv::Mat all_boarders = cv::Mat::zeros(label_vec[0].size(), CV_8UC1);
+//     cv::Mat oi;
+//     vector_to_img(oi, label_vec);
+//     cout << "labeled objects: " << n_labels << endl;
+//     for (int i = 0; i < label_vec.size(); i++) {
+//         // std::vector<std::pair<int, int> > border = find_boundary(label_vec[i]);
+//         // draw_border(all_boarders, border, 1);
+//         cv::Mat colored_full = color_labels(label_vec[i]);
+//         cout << i << endl;
+//         cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
+//         cv::imshow("colored_full", colored_full);
+//         cv::waitKey(0);
+//     }
+//     cv::Mat colored_full = color_labels(label_vec[4]);
+//     cv::Mat eroded_color = color_labels(eroded);
+//     cv::Mat borders = cv::Mat::zeros(labelled.size(), CV_8UC1);
+//     std::vector<std::pair<int, int> > border = find_boundary(label_vec[1]);
+//     draw_border(borders, border, 1);
+//     cv::Mat colored_borders = color_labels(all_boarders);
+//     cv::namedWindow("open-bw-full", cv::WINDOW_AUTOSIZE);
+//     cv::imshow("open-bw-full", open_full);
+//     cv::namedWindow("colored_full", cv::WINDOW_AUTOSIZE);
+//     //cv::setMouseCallback("colored_full", mouse_callback, &colored_full);
+//     cv::imshow("colored_full", colored_full);
+//     cv::namedWindow("colored-eroded", cv::WINDOW_AUTOSIZE);
+//     cv::imshow("colored-eroded", eroded_color);
+//     cv::namedWindow("colored-borders", cv::WINDOW_AUTOSIZE);
+//     cv::imshow("colored-borders", colored_borders);
+//     cv::namedWindow("skelaton", cv::WINDOW_AUTOSIZE);
+//     cv::imshow("skelaton", color_skel);
+//     cv::waitKey(0);
+//     return 0;
+// }
 
 
 int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
@@ -234,6 +234,7 @@ std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
         cerr << "No source image provided." << endl;
     }
 
+    cv::Mat img = cv::Mat::zeros(src.size(), CV_8UC1);
     std::vector<std::pair<int , int> > border; // vector of pixels for border
     cv::Mat search_img = src.clone();
     bool one_boundary = false;
@@ -292,6 +293,10 @@ std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
                             c_pxl = s_pxl;
                             b_pxl = n8[(search_idx -1) % n8.size()].first;
                             border.push_back(c_pxl);
+                            draw_border(img, border, 255);
+                            cv::namedWindow("borders");
+                            cv::imshow("borders", img);
+                            cv::waitKey(1);
                         }
                         search_idx++;
                     }
@@ -506,7 +511,7 @@ void vector_to_img(cv::Mat dst, std::vector<cv::Mat> img_vec) {
         for (int row = 0; row < img_vec[0].rows; row++) {
             for (int col = 0; col < img_vec[0].cols; col++){
                 if (img_vec[i].at<uchar>(row, col) != 0) {
-                    dst.at<uchar>(row, col) = 1;
+                    dst.at<uchar>(row, col) = i + 1;
                 }
             }
         }
@@ -519,27 +524,21 @@ cv::Mat color_labels(cv::Mat& label_img) {
     cv::Mat colored = cv::Mat(label_img.rows, label_img.cols, CV_8UC3,
                               cv::Scalar(255, 255, 255));
     // Create map from integers to BGR color values.
-    std::map<int, cv::Vec3b> color_map;  //
+    std::vector<cv::Vec3b> color_vec;  //
     // Vec3b is B, G, R
-    cv::Vec3b RED = cv::Vec3b(66, 66, 244);
-    cv::Vec3b BLUE = cv::Vec3b(244, 110, 66);
-    cv::Vec3b YELLOW = cv::Vec3b(66, 203, 244);
-    cv::Vec3b GREEN = cv::Vec3b(45, 140, 40);
-    cv::Vec3b ORANGE = cv::Vec3b(27, 103, 196);
-    cv::Vec3b PURPLE = cv::Vec3b(196, 27, 128);
-    color_map.insert(std::pair<int, cv::Vec3b>(1, RED));
-    color_map.insert(std::pair<int, cv::Vec3b>(2, BLUE));
-    color_map.insert(std::pair<int, cv::Vec3b>(3, YELLOW));
-    color_map.insert(std::pair<int, cv::Vec3b>(4, GREEN));
-    color_map.insert(std::pair<int, cv::Vec3b>(5, ORANGE));
-    color_map.insert(std::pair<int, cv::Vec3b>(6, PURPLE));
+    color_vec.push_back(cv::Vec3b(66, 66, 244)); // red
+    color_vec.push_back(cv::Vec3b(244, 110, 66));  // blue
+    color_vec.push_back(cv::Vec3b(66, 203, 244)); // yellow
+    color_vec.push_back(cv::Vec3b(45, 140, 40));  // green
+    color_vec.push_back(cv::Vec3b(27, 103, 196));  // orange
+    color_vec.push_back(cv::Vec3b(196, 27, 128));  // purple
 
     // iterate over labelled image, match label to (label mod 6) color.
     for (int row = 0; row < colored.rows; row++) {
         for (int col = 0; col < colored.cols; col++) {
             if (label_img.at<schar>(row, col) != 0) {
-                int color_idx = (label_img.at<schar>(row, col)) % 6;
-                colored.at<cv::Vec3b>(row, col) = color_map[color_idx];
+                int color_idx = (label_img.at<schar>(row, col)) % color_vec.size();
+                colored.at<cv::Vec3b>(row, col) = color_vec[color_idx];
             }
         }
     }
