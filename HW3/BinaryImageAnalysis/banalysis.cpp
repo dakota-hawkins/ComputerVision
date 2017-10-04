@@ -9,7 +9,7 @@ explanation:
 
 // import libraries, function declarations, etc. from header file
 // no namespaces for clarity
-#include "Source.hpp"
+#include "banalysis.hpp"
 
 // Main function for binary image analysis.
 int main(int argc, char * argv[]) {
