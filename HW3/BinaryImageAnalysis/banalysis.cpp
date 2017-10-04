@@ -78,7 +78,7 @@ int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
     }
 
     if (dst.empty()) {
-        dst = cv::Mat::zeros(b_img.rows, b_img.cols, CV_8UC1);
+        dst = cv::Mat::zeros(b_img.rows, b_img.cols, CV_16UC1);
 
     }
 
@@ -86,8 +86,7 @@ int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
         std::cerr << "Binary image and labelled image must have equal dimensions.";
     }
 
-    cv::Mat neg_b = cv::Mat::zeros(b_img.rows, b_img.cols, CV_16SC1);
-    std::stack<std::pair<int, int> > pixel_stack;
+    cv::Mat neg_b = cv::Mat::zeros(b_img.rows, b_img.cols, CV_32SC1);
     int count = 0;
     // swap 1s to -1s
     for (int b_row = 0; b_row < b_img.rows; b_row++) {
@@ -99,29 +98,33 @@ int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
     }
 
     // find entries to be labelled.
+    cv::namedWindow("floodfill");
     for (int row = 0; row < neg_b.rows; row++) {
         for (int col = 0; col < neg_b.cols; col++) {
             // push unlabeled pixel onto stack
             // new object discovered
+            
             if (neg_b.at<schar>(row, col) == -1) {
                 count++;
+                std::stack<std::pair<int, int> > pixel_stack;
                 pixel_stack.push(std::make_pair(row, col));
                 while (! pixel_stack.empty()) {
                     // retrieve top entry, remove from stack
                     std::pair<int, int> pixel = pixel_stack.top();
                     pixel_stack.pop();
                     // label current pixel
-                    neg_b.at<schar>(pixel.first, pixel.second) = count;
+                    neg_b.at<schar>(pixel.first, pixel.second) = 1;
 
                     // get all possible pixels in 8 neighbor.
                     std::vector<std::pair<int, int> > neighbors;
                     neighbors = get_neighbors(neg_b, pixel.first, pixel.second);
+                    // std::set<std::pair<int, int> > visited;
                     for (int i = 0; i < neighbors.size(); i++) {
                         std::pair<int, int> curr_neighbor = neighbors[i];
                         // label unlabled neighbors, throw on stack to check
                         // other neighbors.
                         if (neg_b.at<schar>(curr_neighbor.first, curr_neighbor.second) == -1) {
-                            neg_b.at<schar>(curr_neighbor.first, curr_neighbor.second) = count;
+                            neg_b.at<schar>(curr_neighbor.first, curr_neighbor.second) = 1;
                             dst.at<uchar>(curr_neighbor.first, curr_neighbor.second) = count;
                             pixel_stack.push(curr_neighbor);
                         }
