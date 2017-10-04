@@ -249,15 +249,18 @@ std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
                 border.push_back(c_pxl);
 
 
-                // Get 4 neighbors to find edge of boundary.
-                std::pair<int, int> b_pxl; // background pixel
-                std::vector<std::pair<int, int> > background_neighbors;
-                background_neighbors = get_n4(row, col, src.rows, src.cols);
+                // instantiate vector of pixels and pixel values for neighbors
+                std::vector<std::pair<std::pair<int, int>, int> > n8;
+                
+                // Get neighbors to find edge of boundary.
+                n8 = clockwise_n8(search_img, c_pxl.first, c_pxl.second);
+                // background_neighbors = get_n4(row, col, src.rows, src.cols);
 
-                // find background pixel
-                for (int i = 0; i < background_neighbors.size(); i++) {
-                    b_pxl = background_neighbors[i];
-                    if (search_img.at<uchar>(b_pxl.first, b_pxl.second) == 0) {
+                // find background pixel, only look at n4.
+                std::pair<int, int> b_pxl;
+                for (int i = 0; i < n8.size(); i += 2) {
+                    if (n8[i].second == 0) {
+                        b_pxl = n8[i].first;
                         break;
                     }
                 }
@@ -293,10 +296,6 @@ std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
                             c_pxl = s_pxl;
                             b_pxl = n8[(search_idx -1) % n8.size()].first;
                             border.push_back(c_pxl);
-                            draw_border(img, border, 255);
-                            cv::namedWindow("borders");
-                            cv::imshow("borders", img);
-                            cv::waitKey(1);
                         }
                         search_idx++;
                     }
@@ -310,6 +309,9 @@ std::vector<std::pair<int , int> > find_boundary(cv::Mat& src) {
 }
 
 void draw_border(cv::Mat& dst, std::vector<std::pair<int, int> > border, int value) {
+    if (value == 0) {
+        value = 1; 
+    }
     for (int i = 0; i < border.size(); i++) {
         dst.at<uchar>(border[i].first, border[i].second) = value;
     }
