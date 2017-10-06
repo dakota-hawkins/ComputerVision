@@ -2,8 +2,8 @@
 #include<iostream>
 #include<vector>
 #include<string>
-#include <dirent.h> 
-#include <stdio.h> 
+#include <dirent.h>
+#include <stdio.h>
 
 // opencv
 #include <opencv2/opencv.hpp>
@@ -19,6 +19,12 @@ Adopted from here: https://stackoverflow.com/questions/23212000/get-the-list-of-
 
 @param read_dir (string): directory to read.
 
-@return vector<string>: vector containing all files. 
+@return vector<string>: vector containing all files.
 */
-std::vector<std::string> print_dir(std::string read_dir);
+std::vector<std::string> list_files(std::string read_dir);
+
+/*!
+Analyze bat data.
+*/
+
+void analyze_bats();
