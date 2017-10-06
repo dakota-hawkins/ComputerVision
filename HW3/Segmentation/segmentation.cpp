@@ -1,37 +1,37 @@
 #include "segmentation.hpp"
 
-int main() {
-    using ::std::cout;
-    using ::std::endl;
+// int main() {
+//     using ::std::cout;
+//     using ::std::endl;
 
-    cv::Mat bats = cv::imread("../BatImages/Gray/CS585Bats-Gray_frame000000750.ppm", CV_8UC1);
-    cv::Mat color_bats = cv::imread("../BatImages/FalseColor/CS585Bats-FalseColor_frame000000750.ppm", CV_32FC3);
-    cv::Mat dst;
+//     cv::Mat bats = cv::imread("../BatImages/Gray/CS585Bats-Gray_frame000000750.ppm", CV_8UC1);
+//     cv::Mat color_bats = cv::imread("../BatImages/FalseColor/CS585Bats-FalseColor_frame000000750.ppm", CV_32FC3);
+//     cv::Mat dst;
 
-    // For bats:
-    // 45, 100
-    // 45, 150
-    cout << "gray test: " << distance(0, 10) << endl;
-    cv::Vec3b color_1 = cv::Vec3b(255, 0, 0);
-    cv::Vec3b color_2 = cv::Vec3b(0, 255, 0);
-    cv::Scalar color_3 = cv::Scalar(0, 255, 0);
-    cout << "color test: " << distance(color_1, color_2) << endl;
-    cout << "Scalar test: " << distance(color_1, color_3) << endl;
-    cv::Mat double_thresh;
-    double_threshold(bats, double_thresh, 45, 150);
-    adaptive_threshold(bats, dst, 7, 3);
-    cv::namedWindow("Source", cv::WINDOW_NORMAL);
-    cv::namedWindow("Double Threshold", cv::WINDOW_NORMAL);
-    cv::namedWindow("Smoothed", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Source", 512, 512);
-    cv::resizeWindow("Double Threshold", 512, 512);
-    cv::resizeWindow("Smoothed", 512, 512);
-    cv::imshow("Source", bats);
-    cv::imshow("Double Threshold", dst);
-    cv::imshow("Smoothed", double_thresh);
-    cv::waitKey(0);
-    return 0;
-}
+//     // For bats:
+//     // 45, 100
+//     // 45, 150
+//     cout << "gray test: " << distance(0, 10) << endl;
+//     cv::Vec3b color_1 = cv::Vec3b(255, 0, 0);
+//     cv::Vec3b color_2 = cv::Vec3b(0, 255, 0);
+//     cv::Scalar color_3 = cv::Scalar(0, 255, 0);
+//     cout << "color test: " << distance(color_1, color_2) << endl;
+//     cout << "Scalar test: " << distance(color_1, color_3) << endl;
+//     cv::Mat double_thresh;
+//     double_threshold(bats, double_thresh, 45, 150);
+//     adaptive_threshold(bats, dst, 7, 3);
+//     cv::namedWindow("Source", cv::WINDOW_NORMAL);
+//     cv::namedWindow("Double Threshold", cv::WINDOW_NORMAL);
+//     cv::namedWindow("Smoothed", cv::WINDOW_NORMAL);
+//     cv::resizeWindow("Source", 512, 512);
+//     cv::resizeWindow("Double Threshold", 512, 512);
+//     cv::resizeWindow("Smoothed", 512, 512);
+//     cv::imshow("Source", bats);
+//     cv::imshow("Double Threshold", dst);
+//     cv::imshow("Smoothed", double_thresh);
+//     cv::waitKey(0);
+//     return 0;
+// }
 
 void adaptive_threshold(cv::Mat& img, cv::Mat& dst, int mask_size, double C) {
     int n_channels = img.channels();
@@ -187,24 +187,6 @@ void simple_threshold(cv::Mat& img, cv::Mat& dst, double thresh, int val) {
             }
         }
     }
-}
-
-// Return clockwise n4 of a pixel starting from the west.
-std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n_cols) {
-    std::vector<std::pair<int, int> > n4;
-    if (c_col - 1 >= 0) {
-        n4.push_back(std::pair<int, int>(c_row, c_col - 1));
-    }
-    if (c_row - 1 >= 0) {
-        n4.push_back(std::pair<int, int>(c_row - 1, c_col));
-    }
-    if (c_col + 1 < n_cols) {
-        n4.push_back(std::pair<int, int>(c_row, c_col + 1));
-    }
-    if (c_row + 1 < n_rows) {
-        n4.push_back(std::pair<int, int>(c_row + 1, c_col));
-    }
-    return n4;
 }
 
 double distance(int val1, int val2) {

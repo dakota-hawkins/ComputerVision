@@ -8,6 +8,9 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
+// My stuff
+#include "../BinaryImageAnalysis/banalysis.hpp"
+
 
 /*!
 Perform adaptive thresholding on a given image. 
@@ -68,17 +71,3 @@ Get the euclidean distance between two BGR values.
 */
 double distance(cv::Vec3b val1, cv::Vec3b val2);
 double distance(cv::Vec3b val1, cv::Scalar val2);
-
-
-/*
-Get N4 of a pixel in clockwise order starting from the West.
-
-Returns the 4-neighbor for a given pixel. Neighbors outside of image boundaries
-will be ignored.
-
-@param c_row(int): current row.
-@param c_col(int): current column.
-@param n_rows(int): total number of rows in image.
-@param n_cols(int): total number of columns in image.
-*/
-std::vector<std::pair<int, int> > get_n4(int c_row, int c_col, int n_rows, int n_cols);
