@@ -6,3 +6,6 @@
 *.mp4
 *.ppm
 *.vscode
+html
+latex
+Doxyfile

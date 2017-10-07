@@ -64,14 +64,14 @@ void adaptive_threshold(cv::Mat& img, cv::Mat& dst, int mask_size, double C) {
                                cv::Range(col_start, col_end));
             cv::Scalar mask_mean = cv::mean(mask);
             // cout <<"mean: " << mask_mean << endl;
-            if (n_channels = 1) {
+            if (n_channels == 1) {
                 if (img.at<uchar>(row, col) > mask_mean[0] - C) {
                     dst.at<uchar>(row, col) = 255;
                 } else {
                     dst.at<uchar>(row, col) = 0;
                 }
             }
-            else if (n_channels = 3) {
+            else if (n_channels == 3) {
                 double dif_mag = distance(dst.at<cv::Vec3b>(row, col), mask_mean);
                 double avg_diff = 0;
                 for (int y = 0; y < mask.rows; y++) {

@@ -2,15 +2,17 @@
 #include<iostream>
 #include<vector>
 #include<string>
-#include <dirent.h>
-#include <stdio.h>
+#include<dirent.h>
+#include<stdio.h>
+#include<map>
+#include<math.h>
 
 // opencv
 #include <opencv2/opencv.hpp>
 
 // my stuff
-// #include "../BinaryImageAnalysis/banalysis.hpp"
-#include "../Segmentation/segmentation.hpp"
+#include "/home/dakota/Documents/School/2017-2018/CS585/HW3/BinaryImageAnalysis/banalysis.hpp"
+// #include "../Segmentation/segmentation.hpp"
 
 /*!
 List all files in a directory.
@@ -28,3 +30,14 @@ Analyze bat data.
 */
 
 void analyze_bats();
+
+
+/*!
+Trace a binary image onto another image.
+
+@param src: source image to trace.
+@param dst: destination image to write to.
+@param value: pixel value to assign over trace.
+*/
+void trace_binary(cv::Mat & src, cv::Mat & dst, int value);
+void trace_binary(cv::Mat & src, cv::Mat & dst, cv::Vec3b value);

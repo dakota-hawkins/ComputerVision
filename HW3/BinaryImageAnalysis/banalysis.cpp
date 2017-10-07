@@ -98,7 +98,6 @@ int recursive_label(cv::Mat& b_img, cv::Mat& dst) {
     }
 
     // find entries to be labelled.
-    cv::namedWindow("floodfill");
     for (int row = 0; row < neg_b.rows; row++) {
         for (int col = 0; col < neg_b.cols; col++) {
             // push unlabeled pixel onto stack
@@ -433,10 +432,9 @@ std::map<std::string, double> calculate_statistics(cv::Mat& img) {
     // Calculate orientation
     double x_bar = moments.m10/moments.m00;
     double y_bar = moments.m01/moments.m00;
-    double mu_11 = moments.m11/moments.m00 - x_bar * y_bar;
-    double mu_20 = moments.m20/moments.m00 - x_bar * x_bar;
-    double mu_02 = moments.m20/moments.m00 - y_bar * y_bar;
-    stats["theta"] = 0.5 * std::atan((2.0 * mu_11) / (mu_20 - mu_02));
+    stats["x_bar"] = x_bar;
+    stats["y_bar"] = y_bar;
+    stats["theta"] = 0.5 * std::atan((2.0 * moments.mu11) / (moments.mu20 - moments.mu02));
 
     // Calculate e_min and e_max => circularity
     double first_term = (moments.m20 + moments.m02) / (moments.m11);
@@ -448,7 +446,7 @@ std::map<std::string, double> calculate_statistics(cv::Mat& img) {
     double e_min = first_term - second_term * third_term - fourth_term;
     double e_max = first_term + second_term * third_term + fourth_term;
     stats["circ"] = e_min/e_max;
-    
+
     return stats;
 
 }
@@ -541,9 +539,15 @@ cv::Mat color_labels(cv::Mat& label_img) {
     // iterate over labelled image, match label to (label mod 6) color.
     for (int row = 0; row < colored.rows; row++) {
         for (int col = 0; col < colored.cols; col++) {
-            if (label_img.at<schar>(row, col) != 0) {
-                int color_idx = (label_img.at<schar>(row, col)) % color_vec.size();
-                colored.at<cv::Vec3b>(row, col) = color_vec[color_idx];
+            if (label_img.at<uchar>(row, col) != 0) {
+                int color_idx = (label_img.at<uchar>(row, col)) % color_vec.size();
+                // std::cout << "r = " << row << " c = " << col << colored.size() << std::endl;
+                if (color_idx < color_vec.size()) {
+                    colored.at<cv::Vec3b>(row, col) = color_vec[color_idx];
+                } else {
+                    colored.at<cv::Vec3b>(row, col) = cv::Vec3b(0, 0, 0);
+                }
+                
             }
         }
     }
@@ -576,4 +580,185 @@ void mouse_callback(int event, int  x, int  y, int  flags, void *param){
         }
         std::cout << int(value[3]) << ")\n";
     }
+}
+
+
+// --------------------------Segmentation Functions-----------------------------
+
+
+void adaptive_threshold(cv::Mat& img, cv::Mat& dst, int mask_size, double C) {
+    int n_channels = img.channels();
+    using ::std::cerr;
+    using ::std::cout;
+    using ::std::endl;
+
+    if (img.empty()) {
+        cerr << "Error: cannot access image data" << endl;
+        return; 
+    }
+
+    if (dst.empty()) {
+        dst = cv::Mat(img.size(), CV_8UC1);
+    }
+
+    if (dst.channels() > 1) {
+        cerr << "Error: Expected single channel image for `dst`." << endl;
+    }
+
+    for (int row = 0; row < img.rows ; row++) {
+        int row_start = std::max(0, row - mask_size/2);
+        int row_end = std::min(img.rows, row + mask_size/2);
+
+        for (int col = 0; col < img.cols; col++) {
+            int col_start = std::max(0, col - mask_size/2);
+            int col_end = std::min(img.cols, col + mask_size/2);
+
+            cv::Mat mask = img(cv::Range(row_start, row_end),
+                               cv::Range(col_start, col_end));
+            cv::Scalar mask_mean = cv::mean(mask);
+            // cout <<"mean: " << mask_mean << endl;
+            if (n_channels == 1) {
+                if (img.at<uchar>(row, col) > mask_mean[0] - C) {
+                    dst.at<uchar>(row, col) = 255;
+                } else {
+                    dst.at<uchar>(row, col) = 0;
+                }
+            }
+            else if (n_channels == 3) {
+                double dif_mag = distance(dst.at<cv::Vec3b>(row, col), mask_mean);
+                double avg_diff = 0;
+                for (int y = 0; y < mask.rows; y++) {
+                    for (int x = 0; x < mask.cols; x ++) {
+                        avg_diff += distance(dst.at<cv::Vec3b>(x, y), mask_mean);
+                    }
+                }
+                if (dif_mag > avg_diff/(mask.rows * mask.cols) - C) {
+                    dst.at<uchar>(row, col) = 255;
+                } else {
+                    dst.at<uchar>(row, col) = 0;
+                }
+                
+            }
+        }
+    }
+}
+
+void double_threshold(cv::Mat& img, cv::Mat& dst, double thresh_1, double thresh_2) {
+    using ::std::cerr;
+    using ::std::cout;
+    using ::std::endl;
+
+    if (img.empty()) {
+        cerr << "Error: cannot access image data." << endl;
+        return;
+    }
+    if (img.channels() > 1) {
+        cerr << "Error: double thresholding only on grayscale images." << endl;
+    }
+    if (dst.empty()) {
+        dst = cv::Mat::zeros(img.size(), CV_8UC1);
+    }
+    if (dst.size() != img.size()) {
+        cerr << "Error: source and destination images must have the same dimensions." << endl;
+        return;
+    }
+
+    // Threshold image into three regions.
+    // R1 = p(x, y) s.t. p(x, y) < thresh_1
+    // R2 = p(x, y) s.t. thresh_1 <= p(x, y) < thresh_2
+    // R3 = p(x, y) s.t. p(x, y) >= thresh_2 
+    for (int row = 0; row < img.rows; row++) {
+        for (int col = 0; col < img.cols; col++) {
+            int value = img.at<uchar>(row, col);
+            if (value < thresh_1) {
+                dst.at<uchar>(row, col) = 0;
+            } else if (value >= thresh_1 && value < thresh_2) {
+                dst.at<uchar>(row, col) = 2;
+            } else {
+                dst.at<uchar>(row, col) = 255;
+            }
+        }
+    }
+
+    // Merge pixels from R2 into R1 if the pixel has neighbors in R1. 
+    // Repeat until no pixels are re-assigned. 
+    bool movement = true;
+    while (movement) {
+        movement = false;
+        for (int row = 0; row < dst.rows; row++) {
+            for (int col = 0; col < dst.cols; col++) {
+                if (dst.at<uchar>(row, col) == 2) {
+                    std::vector<std::pair<int, int> > n4;
+                    n4 = get_n4(row, col, dst.rows, dst.cols);
+                    for (int i = 0; i < n4.size(); i++) {
+                        if (dst.at<uchar>(n4[i].first, n4[i].second) == 0) {
+                            dst.at<uchar>(row, col) = 0;
+                            movement = true;
+                            break;
+                        }
+                    }
+                                    
+                }
+            }
+        }
+    }
+
+    // Re-assign remaining pixels in R2 to R3. 
+    for (int row = 0; row < dst.rows; row++) {
+        for (int col = 0; col < dst.cols; col++) {
+            if (dst.at<uchar>(row, col) == 2) {
+                dst.at<uchar>(row, col) = 255;
+            }
+        }
+    }
+
+    
+}
+
+void simple_threshold(cv::Mat& img, cv::Mat& dst, double thresh, int val) {
+    using ::std::cerr;
+    using ::std::cout;
+    using ::std::endl;
+    if (img.empty()) {
+        cerr << "Error: cannot access image data." << endl;
+        return;
+    }
+    if (dst.empty()) {
+        dst = cv::Mat::zeros(img.size(), CV_8UC1);
+    }
+    if (dst.size() != img.size()) {
+        cerr << "Error: source and destination images must have the same dimensions." << endl;
+        return;
+    }
+
+    for (int row = 0; row < img.rows; row++) {
+        for (int col = 0; col < img.cols; col++) {
+            if (img.at<uchar>(row, col) > thresh) {
+                img.at<uchar>(row, col) = 1;
+            } else {
+                img.at<uchar>(row, col) = 0;
+            }
+        }
+    }
+}
+
+double distance(int val1, int val2) {
+
+    return abs(val1 - val2);
+}
+
+double distance(cv::Vec3b val1, cv::Vec3b val2){
+    double distance = 0;
+    for (int i = 0; i < 3; i++) {
+        distance += std::pow((val1[i] - val2[i]), 2);
+    }
+    return std::sqrt(distance);
+}
+
+double distance(cv::Vec3b val1, cv::Scalar val2) {
+    double distance = 0;
+    for (int i = 0; i < 3; i++) {
+        distance += std::pow((val1[i] - val2[i]), 2);
+    }
+    return std::sqrt(distance);
 }
