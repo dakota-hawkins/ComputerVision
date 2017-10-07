@@ -328,7 +328,7 @@ bool peer_metric(Vec3b& bgr) {
 			}
         }
     }
-	return false; Mat FIST_TEMPLATE_1 = imread("../Templates/FistTemplate1Smaller.jpg", IMREAD_GRAYSCALE);
+	return false;
 }
 
 
