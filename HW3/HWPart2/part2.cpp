@@ -5,9 +5,9 @@ int main() {
     using ::std::endl;
     using ::std::cerr;
 
-    // analyze_bats();
+    analyze_bats();
     // analyze_piano();
-    analyze_people();
+    // analyze_people();
     return 0;
 }
 
@@ -17,24 +17,35 @@ void analyze_bats() {
   using ::std::cerr;
 
   std::vector<std::string> bats = list_files("../BatImages/Gray/");
-  cv::namedWindow("bats - source", cv::WINDOW_NORMAL);
-  cv::resizeWindow("bats - source", 512, 512);
-  cv::namedWindow("bats - filtered", cv::WINDOW_NORMAL);
-  cv::resizeWindow("bats - filtered", 512, 512);
-  cv::namedWindow("bats - colored", cv::WINDOW_NORMAL);
-  cv::resizeWindow("bats - colored", 512, 512);
+//   cv::namedWindow("bats - source", cv::WINDOW_NORMAL);
+//   cv::resizeWindow("bats - source", 512, 512);
+//   cv::namedWindow("bats - filtered", cv::WINDOW_NORMAL);
+//   cv::resizeWindow("bats - filtered", 512, 512);
+//   cv::namedWindow("bats - colored", cv::WINDOW_NORMAL);
+//   cv::resizeWindow("bats - colored", 512, 512);
   cv::Mat frame;
   
-  for (int i = 0; i < bats.size(); i++) {
-      if (bats[i].substr(bats[i].find_last_of(".") + 1) != "ppm") {
+  std::ofstream out_file;
+  out_file.open("bats_counts.csv");
+  out_file << "file,in,out" << endl;
+  for (int k = 0; k < bats.size(); k++) {
+      if (bats[k].substr(bats[k].find_last_of(".") + 1) != "ppm") {
           continue;
       }
-      frame = cv::imread(bats[i], CV_8UC1);
+      frame = cv::imread(bats[k], CV_8UC1);
       if (frame.empty()) {
-          cerr << "Can't read image data: " << bats[i] << endl;
+          cerr << "Can't read image data: " << bats[k] << endl;
           return;
       }
-      cout << "i = " << i << endl;
+      std::stringstream convert;
+      convert << k;
+      std::string k_string = convert.str();
+
+      std::string base_name = "BatImages/bats_" + k_string + "_";
+      std::string binary_file = base_name + "binary.jpg";
+      std::string labeled_file = base_name + "labels.jpg";
+
+      cout << "k = " << k << endl;
       cv::Mat mask_3 = cv::Mat::ones(cv::Size(3, 3), CV_8UC1);
       cv::Mat mask_5 = cv::Mat::ones(cv::Size(5, 5), CV_8UC1);
       cv::Mat blurred, binary_bats, dilated, eroded;
@@ -43,6 +54,7 @@ void analyze_bats() {
       adaptive_threshold(blurred, binary_bats, 15, -5);
       cv::dilate(binary_bats, dilated, mask_3);
       erosion(dilated, eroded, mask_3);
+      cv::imwrite(binary_file, dilated);
       cv::threshold(dilated, dilated, 5, 1, cv::THRESH_BINARY);
 
       cv::Mat labeled = cv::Mat::zeros(frame.size(), CV_16UC1);
@@ -51,12 +63,13 @@ void analyze_bats() {
       std::vector<cv::Mat> bat_vec;
       cv::Mat borders = cv::Mat::zeros(frame.size(), CV_8UC1);
 
-      cv::imshow("bats - source", frame);
-      cv::imshow("bats - filtered", binary_bats);
+    //   cv::imshow("bats - source", frame);
+    //   cv::imshow("bats - filtered", binary_bats);
 
       cv::waitKey(1);
       cv::Mat fly_or_glide = cv::Mat(frame.rows, frame.cols, CV_8UC3, cv::Vec3b(255, 255, 255));
-      int count = 0;
+      int count_out = 0;
+      int count_in = 0;
       for (int i = 0; i < n_labels; i++) {
           std::map<std::string, double> stats = calculate_statistics(label_vec[i]);
           if (stats["area"] > 50) {
@@ -73,21 +86,24 @@ void analyze_bats() {
               double fullness = double(stats["area"]) / (box.width * box.height);
               cv::Vec3b trace_color = cv::Vec3b(244, 110, 66); // blue
               if (fullness > 0.53) {
-                  count ++;
+                  count_out ++;
                   trace_color = cv::Vec3b(66, 66, 244);  // red
+              } else {
+                  count_in++;
               }
               trace_binary(label_vec[i], fly_or_glide, trace_color);
-              cout << "fullness: " << fullness << endl;
-              cv::imshow("bats - colored", fly_or_glide);
-              cv::waitKey(1);
+            //   cout << "fullness: " << fullness << endl;
+            //   cv::imshow("bats - colored", fly_or_glide);
+            //   cv::waitKey(1);
           }
       }
-      cv::waitKey(0);
-      cout << "count = " << count;
-
+    //   cv::waitKey(0);
       cv::Mat selected_bats = cv::Mat::zeros(frame.size(), CV_8UC1);
       vector_to_img(selected_bats, bat_vec);
+      cv::imwrite(labeled_file, fly_or_glide);
+      out_file << bats[k] << "," << count_in << "," << count_out << endl;
   }
+  out_file.close();
 }
 
 
@@ -267,17 +283,121 @@ void analyze_people() {
             cv::Mat diff1, diff2;
             cv::absdiff(gray_vec[i], gray_vec[i - 1], diff1);
             cv::absdiff(gray_vec[i], gray_vec[i + 1], diff2);
-            diff_mat.converTo()
+            diff_mat = diff1;
+            // average_img(diff1, diff2, diff_mat);
+            diff1.release();
+            diff2.release();
         }
+        diff_vec.push_back(diff_mat);
+        diff_mat.release();
     }
 
-    cv::namedWindow("people", CV_WINDOW_NORMAL);
-    cv::namedWindow("diff", CV_WINDOW_NORMAL);
-    for (int i = 0; i < src_vec.size(); i++) {
-        cv::imshow("people", src_vec[i]);
-        cv::imshow("diff", diff_vec[i]);
-        cv::waitKey(0);
+    // cv::namedWindow("people", CV_WINDOW_NORMAL);
+    // cv::namedWindow("diff", CV_WINDOW_NORMAL);
+    // cv::namedWindow("binary", CV_WINDOW_NORMAL);
+    // cv::namedWindow("isolated", CV_WINDOW_NORMAL);
+    std::ofstream write_file;
+    write_file.open("pedestrian_guesses.csv");
+    write_file << "file,guess" << endl;
+
+    std::string dir = "PeopleImages/";
+    for (int k = 0; k < src_vec.size(); k++) {
+
+        std::string k_string;
+        std::stringstream convert;
+        convert << k;
+        k_string = convert.str();
+  
+        std::string base_name = dir + "people_" + k_string + "_";
+        std::string binary_file = base_name + "binary.jpg";
+        std::string diff_file = base_name + "difference.jpg";
+        std::string labeled_file = base_name + "labels.jpg";
+
+        // cv::imshow("people", src_vec[k]);
+        // cv::imshow("diff", diff_vec[k]);
+        cv::Mat blurred, b_img;
+        // double_threshold(diff_vec[i], b_img, 20, 70);
+        cv::blur(diff_vec[k], blurred, cv::Size(10, 10), cv::Point(-1, -1), 4);
+        // double_threshold(blurred, b_img, 20, 40);
+        // cv::threshold(blurred, b_img, 20, 255, CV_THRESH_BINARY);
+        adaptive_threshold(blurred, b_img, 15, -6);
+        blurred.release();
+        cv::Mat labeled;
+        cv::threshold(b_img, b_img, 5, 1, CV_THRESH_BINARY);
+        int n_labels = recursive_label(b_img, labeled);
+        std::vector<cv::Mat> label_vec = label_img_to_vector(labeled, n_labels);
+        labeled.release();
+
+        std::vector<double> y_bars;
+        std::vector<double> x_bars;
+        std::vector<double> areas;
+        for (int i = 0; i < n_labels; i++) {
+            std::map<std::string, double> stats = calculate_statistics(label_vec[i]);
+            y_bars.push_back(stats["y_bar"]);
+            x_bars.push_back(stats["x_bar"]);
+            areas.push_back(stats["area"]);
+        }
+
+        std::set<int> matched;
+        std::set<int> rep_idx;
+        cout << "#: " << n_labels << endl;
+        for (int i = 0; i < n_labels; i++) {
+            std::set<int>::iterator it;
+            // for (it = matched.begin(); it != matched.end(); it++) {
+            //     cout << *it <<  ", ";
+            // }
+            // cout << endl;
+            it = matched.find(i);
+            if (it == matched.end() && areas[i] > 100) {
+                matched.insert(i);
+                rep_idx.insert(i);
+                double y_bar = y_bars[i];
+                double x_bar = x_bars[i];
+                // cout << i << " (" << y_bar << ", " << x_bar << ") matched with:" << endl; 
+                double y_thresh = 80;
+                double x_thresh = 30;
+                for (int j = 0; j < y_bars.size(); j++) {
+                    if (j != i) {
+                        bool in_y = (y_bar - y_thresh <= y_bars[j] && y_bar + y_thresh >= y_bars[j]);
+                        bool in_x = (x_bar - x_thresh <= x_bars[j] && x_bar + x_thresh >= x_bars[j]);
+                        if (in_y && in_x) {
+                            matched.insert(j);
+                            label_vec[i] += label_vec[j];
+                        }
+                    } 
+                }
+            }
+        }
+
+        std::set<int>::iterator it;
+        std::vector<cv::Mat> combined_vec;
+        for (int i = 0; i < label_vec.size(); i++) {
+            it = rep_idx.find(i);
+            if (it == rep_idx.end()) {
+                label_vec[i].release();
+            } else {
+                combined_vec.push_back(label_vec[i]);
+            }
+        }
+        write_file << image_files[k] << "," << combined_vec.size() << endl;
+        cv::Mat combined_labels = cv::Mat(diff_vec[0].size(), CV_8UC1);
+        vector_to_img(combined_labels, combined_vec);
+        cv::Mat colored_labeled = color_labels(combined_labels);
+        cv::Rect test_rect = cv::Rect(0, 0, 30, 80);
+        cv::rectangle(colored_labeled, test_rect, cv::Scalar(100, 100, 100));
+        cv::threshold(b_img, b_img, 0, 255, CV_THRESH_BINARY);
+        // cv::imshow("binary", b_img);
+        // cv::imshow("isolated", colored_labeled);
+        // cv::waitKey(0);
+        cv::imwrite(binary_file, b_img);
+        cv::imwrite(diff_file, diff_vec[k]);
+        cv::imwrite(labeled_file, colored_labeled);
+        b_img.release();
+        labeled.release();
+        combined_labels.release();
+        colored_labeled.release();
     }
+    write_file.close();
 }
 
 
@@ -456,5 +576,21 @@ void average_img(cv::Mat & img1, cv::Mat & img2, cv::Mat & dst) {
     if (img1.size() != img2.size()) {
         cerr << "Error: expected equal-sized images." << endl;
         return;
+    }
+
+    if (dst.empty()) {
+        dst = cv::Mat::zeros(img1.size(), img1.type());
+    }
+
+    if (dst.size() != img1.size()) {
+        cerr << "Error: expected output and input images to be equal dimensions." << endl;
+        return;
+    }
+
+    for (int row = 0; row < img1.rows; row++) {
+        for (int col = 0; col < img1.cols; col++) {
+            int value = (img1.at<uchar>(row, col) + img2.at<uchar>(row, col));
+            dst.at<uchar>(row, col) = value*0.5;
+        }
     }
 }
