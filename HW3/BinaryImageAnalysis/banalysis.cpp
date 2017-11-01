@@ -2,7 +2,7 @@
 Dakota Hawkins
 CS 585 Homework 3
 
-This program performs binary image analysis.
+This program performs binary image analysis and segmentation.
 
 explanation:
 */

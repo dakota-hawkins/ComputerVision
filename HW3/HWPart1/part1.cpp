@@ -62,17 +62,17 @@ void open_partial() {
     cv::Mat color_skelatons = color_labels(skelatons);
     cv::Mat color_segments = color_labels(isolated);
     cv::Mat color_borders = color_labels(borders);
-    // cv::namedWindow("Open Partial");
-    // cv::namedWindow("Open Partial - Skelatons");
-    // cv::namedWindow("Open Partial - Segments");
-    // cv::namedWindow("Open Partial - Borders");
-    // cv::imshow("Open Partial", img);
+    cv::namedWindow("Open Partial");
+    cv::namedWindow("Open Partial - Skelatons");
+    cv::namedWindow("Open Partial - Segments");
+    cv::namedWindow("Open Partial - Borders");
+    cv::imshow("Open Partial", img);
     cv::imwrite("open-partial-skelatons.jpg", color_skelatons);
     cv::imwrite("open-partial-segments.jpg", color_segments);
     cv::imwrite("open-partial-borders.jpg", color_borders);
-    // cv::imshow("Open Partial - Skelatons", color_skelatons);
-    // cv::imshow("Open Partial - Segments", color_segments);
-    // cv::imshow("Open Partial - Borders", color_borders);
+    cv::imshow("Open Partial - Skelatons", color_skelatons);
+    cv::imshow("Open Partial - Segments", color_segments);
+    cv::imshow("Open Partial - Borders", color_borders);
     cv::waitKey(0);
 }
 
@@ -132,17 +132,17 @@ void open_full() {
     cv::Mat color_skelatons = color_labels(skelatons);
     cv::Mat color_segments = color_labels(isolated);
     cv::Mat color_borders = color_labels(borders);
-    // cv::namedWindow("Open Full");
-    // cv::namedWindow("Open Full - Skelatons");
-    // cv::namedWindow("Open Full - Segments");
-    // cv::namedWindow("Open Full - Borders");
-    // cv::imshow("Open Full", img);
+    cv::namedWindow("Open Full");
+    cv::namedWindow("Open Full - Skelatons");
+    cv::namedWindow("Open Full - Segments");
+    cv::namedWindow("Open Full - Borders");
+    cv::imshow("Open Full", img);
     cv::imwrite("open-full-skelatons.jpg", color_skelatons);
     cv::imwrite("open-full-segments.jpg", color_segments);
     cv::imwrite("open-full-borders.jpg", color_borders);
-    // cv::imshow("Open Full - Skelatons", color_skelatons);
-    // cv::imshow("Open Full - Segments", color_segments);
-    // cv::imshow("Open Full - Borders", color_borders);
+    cv::imshow("Open Full - Skelatons", color_skelatons);
+    cv::imshow("Open Full - Segments", color_segments);
+    cv::imshow("Open Full - Borders", color_borders);
     cv::waitKey(0);
 }
 
@@ -203,17 +203,17 @@ void open_fist() {
     cv::Mat color_skelatons = color_labels(skelatons);
     cv::Mat color_segments = color_labels(isolated);
     cv::Mat color_borders = color_labels(borders);
-    // cv::namedWindow("Open Full");
-    // cv::namedWindow("Open Full - Skelatons");
-    // cv::namedWindow("Open Full - Segments");
-    // cv::namedWindow("Open Full - Borders");
-    // cv::imshow("Open Full", img);
+    cv::namedWindow("Open Full");
+    cv::namedWindow("Open Full - Skelatons");
+    cv::namedWindow("Open Full - Segments");
+    cv::namedWindow("Open Full - Borders");
+    cv::imshow("Open Full", img);
     cv::imwrite("open-fist-skelatons.jpg", color_skelatons);
     cv::imwrite("open-fist-segments.jpg", color_segments);
     cv::imwrite("open-fist-borders.jpg", color_borders);
-    // cv::imshow("Open Full - Skelatons", color_skelatons);
-    // cv::imshow("Open Full - Segments", color_segments);
-    // cv::imshow("Open Full - Borders", color_borders);
+    cv::imshow("Open Full - Skelatons", color_skelatons);
+    cv::imshow("Open Full - Segments", color_segments);
+    cv::imshow("Open Full - Borders", color_borders);
     cv::waitKey(0);
 }
 
@@ -230,8 +230,8 @@ void tumor_fold() {
     cv::Mat e_mask = cv::Mat::ones(cv::Size(5, 5), CV_8UC1);
     cv::Mat d_mask = cv::Mat::ones(cv::Size(3, 3), CV_8UC1);
     cv::Mat eroded;
-    // cv::namedWindow("tumor");
-    // cv::imshow("tumor", img);
+    cv::namedWindow("tumor");
+    cv::imshow("tumor", img);
     erosion(binary, eroded, e_mask);
     cv::Mat eroded_2;
     erosion(eroded, eroded_2, d_mask);
@@ -240,9 +240,9 @@ void tumor_fold() {
     cv::dilate(eroded_2, dilated, d_mask);
     cv::Mat colored = color_labels(dilated);
     cv::imwrite("tumor-fold-dilated.jpg", colored);
-    // cv::namedWindow("dilated");
-    // cv::imshow("dilated", colored);
-    // cv::waitKey(0);
+    cv::namedWindow("dilated");
+    cv::imshow("dilated", colored);
+    cv::waitKey(0);
 
     // label image
     cv::Mat labeled;
@@ -321,16 +321,16 @@ void tumor_fold() {
     cv::Mat color_skelatons = color_labels(skelatons);
     cv::Mat color_segments = color_labels(isolated);
     cv::Mat color_borders = color_labels(borders);
-    // cv::namedWindow("Open Full");
-    // cv::namedWindow("Open Full - Skelatons");
-    // cv::namedWindow("Open Full - Segments");
-    // cv::namedWindow("Open Full - Borders");
-    // cv::imshow("Open Full", img);
+    cv::namedWindow("Open Full");
+    cv::namedWindow("Open Full - Skelatons");
+    cv::namedWindow("Open Full - Segments");
+    cv::namedWindow("Open Full - Borders");
+    cv::imshow("Open Full", img);
     cv::imwrite("tumor-fold-skelatons.jpg", color_skelatons);
     cv::imwrite("tumor-fold-segments.jpg", color_segments);
     cv::imwrite("tumor-fold-borders.jpg", color_borders);
-    // cv::imshow("Open Full - Skelatons", color_skelatons);
-    // cv::imshow("Open Full - Segments", color_segments);
-    // cv::imshow("Open Full - Borders", color_borders);
-    // cv::waitKey(0);
+    cv::imshow("Open Full - Skelatons", color_skelatons);
+    cv::imshow("Open Full - Segments", color_segments);
+    cv::imshow("Open Full - Borders", color_borders);
+    cv::waitKey(0);
 }

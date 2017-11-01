@@ -1,12 +1,19 @@
 #include "part2.hpp"
+/*
+Dakota Hawkins
+BU CS585
+Script to analyze `bats`, `piano` and `pedestriant` datasets.
+
+All imports in header file. 
+*/
 
 int main() {
     using ::std::cout;
     using ::std::endl;
     using ::std::cerr;
 
-    analyze_bats();
-    // analyze_piano();
+    // analyze_bats();
+    analyze_piano();
     // analyze_people();
     return 0;
 }
@@ -16,15 +23,21 @@ void analyze_bats() {
   using ::std::endl;
   using ::std::cerr;
 
-  std::vector<std::string> bats = list_files("../BatImages/Gray/");
-//   cv::namedWindow("bats - source", cv::WINDOW_NORMAL);
-//   cv::resizeWindow("bats - source", 512, 512);
-//   cv::namedWindow("bats - filtered", cv::WINDOW_NORMAL);
-//   cv::resizeWindow("bats - filtered", 512, 512);
-//   cv::namedWindow("bats - colored", cv::WINDOW_NORMAL);
-//   cv::resizeWindow("bats - colored", 512, 512);
+//   std::vector<std::string> bats = list_files("../BatImages/Gray/");
+  cv::namedWindow("bats - source", cv::WINDOW_NORMAL);
+  cv::resizeWindow("bats - source", 512, 512);
+  cv::namedWindow("bats - filtered", cv::WINDOW_NORMAL);
+  cv::resizeWindow("bats - filtered", 512, 512);
+  cv::namedWindow("bats - colored", cv::WINDOW_NORMAL);
+  cv::resizeWindow("bats - colored", 512, 512);
+  std::ifstream in("../BatImages/Gray/file_list.txt");
+  std::string line;
+  std::vector<std::string> bats;
+  cout << "hi" << endl;
+  while (std::getline(in, line)) {
+    bats.push_back("../BatImages/Gray/" + line);
+  }
   cv::Mat frame;
-  
   std::ofstream out_file;
   out_file.open("bats_counts.csv");
   out_file << "file,in,out" << endl;
@@ -63,8 +76,8 @@ void analyze_bats() {
       std::vector<cv::Mat> bat_vec;
       cv::Mat borders = cv::Mat::zeros(frame.size(), CV_8UC1);
 
-    //   cv::imshow("bats - source", frame);
-    //   cv::imshow("bats - filtered", binary_bats);
+      cv::imshow("bats - source", frame);
+      cv::imshow("bats - filtered", binary_bats);
 
       cv::waitKey(1);
       cv::Mat fly_or_glide = cv::Mat(frame.rows, frame.cols, CV_8UC3, cv::Vec3b(255, 255, 255));
@@ -93,11 +106,11 @@ void analyze_bats() {
               }
               trace_binary(label_vec[i], fly_or_glide, trace_color);
             //   cout << "fullness: " << fullness << endl;
-            //   cv::imshow("bats - colored", fly_or_glide);
-            //   cv::waitKey(1);
+              cv::waitKey(1);
           }
       }
-    //   cv::waitKey(0);
+      cv::imshow("bats - colored", fly_or_glide);
+      cv::waitKey(1);
       cv::Mat selected_bats = cv::Mat::zeros(frame.size(), CV_8UC1);
       vector_to_img(selected_bats, bat_vec);
       cv::imwrite(labeled_file, fly_or_glide);
@@ -152,14 +165,14 @@ void analyze_piano() {
         }
     }
 
-    // cv::namedWindow("piano - source", cv::WINDOW_NORMAL);
-    // cv::resizeWindow("piano - source", 640, 400);
-    // cv::namedWindow("piano - gray", CV_WINDOW_NORMAL);
-    // cv::resizeWindow("piano - gray", 640, 400);
-    // cv::namedWindow("piano - difference", CV_WINDOW_NORMAL);
-    // cv::resizeWindow("piano - difference", 640, 400);
-    // cv::namedWindow("modified", CV_WINDOW_NORMAL);
-    // cv::resizeWindow("modified", 640, 400);
+    cv::namedWindow("piano - source", cv::WINDOW_NORMAL);
+    cv::resizeWindow("piano - source", 640, 400);
+    cv::namedWindow("piano - gray", CV_WINDOW_NORMAL);
+    cv::resizeWindow("piano - gray", 640, 400);
+    cv::namedWindow("piano - difference", CV_WINDOW_NORMAL);
+    cv::resizeWindow("piano - difference", 640, 400);
+    cv::namedWindow("modified", CV_WINDOW_NORMAL);
+    cv::resizeWindow("modified", 640, 400);
     
     // abs difference is abelian, so just set t0 to t1 - t0
     std::string dir = "HandImages/";
@@ -172,9 +185,9 @@ void analyze_piano() {
 
       std::string base_name = "piano_" + i_string + "_";
       cout << i + 1 << "/" << src_vec.size() << endl;
-    //   cv::imshow("piano - source", src_vec[i]);
-    //   cv::imshow("piano - gray", gray_vec[i]);
-    //   cv::imshow("piano - difference", diff_vec[i]);
+      cv::imshow("piano - source", src_vec[i]);
+      cv::imshow("piano - gray", gray_vec[i]);
+      cv::imshow("piano - difference", diff_vec[i]);
 
       // Files to write
       std::string source_name = dir + base_name + "original.jpg";
@@ -232,8 +245,8 @@ void analyze_piano() {
 
       // write image
       cv::imwrite(extracted_name, out);
-    //   cv::imshow("modified", out);
-    //   cv::waitKey(0);
+      cv::imshow("modified", out);
+      cv::waitKey(0);
     }
 
 }
@@ -292,10 +305,10 @@ void analyze_people() {
         diff_mat.release();
     }
 
-    // cv::namedWindow("people", CV_WINDOW_NORMAL);
-    // cv::namedWindow("diff", CV_WINDOW_NORMAL);
-    // cv::namedWindow("binary", CV_WINDOW_NORMAL);
-    // cv::namedWindow("isolated", CV_WINDOW_NORMAL);
+    cv::namedWindow("people", CV_WINDOW_NORMAL);
+    cv::namedWindow("diff", CV_WINDOW_NORMAL);
+    cv::namedWindow("binary", CV_WINDOW_NORMAL);
+    cv::namedWindow("isolated", CV_WINDOW_NORMAL);
     std::ofstream write_file;
     write_file.open("pedestrian_guesses.csv");
     write_file << "file,guess" << endl;
@@ -386,9 +399,11 @@ void analyze_people() {
         cv::Rect test_rect = cv::Rect(0, 0, 30, 80);
         cv::rectangle(colored_labeled, test_rect, cv::Scalar(100, 100, 100));
         cv::threshold(b_img, b_img, 0, 255, CV_THRESH_BINARY);
-        // cv::imshow("binary", b_img);
-        // cv::imshow("isolated", colored_labeled);
-        // cv::waitKey(0);
+        cv::imshow("people", src_vec[k]);
+        cv::imshow("diff", diff_vec[k]);
+        cv::imshow("binary", b_img);
+        cv::imshow("isolated", colored_labeled);
+        cv::waitKey(1);
         cv::imwrite(binary_file, b_img);
         cv::imwrite(diff_file, diff_vec[k]);
         cv::imwrite(labeled_file, colored_labeled);
