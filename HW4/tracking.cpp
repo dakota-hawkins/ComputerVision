@@ -1,7 +1,7 @@
 // Author: Dakota Hawkins
 // Class: CS585 - HW4
 
-// This program tracks the position of localized bats and fish in videos. 
+// This program tracks the position of localized bats and fish in videos.
 
 
 #include "tracking.hpp"
@@ -21,7 +21,7 @@ int main() {
     // cv::waitKey(0);
     // std::vector<std::string> sub_files(&files[0], &files[20]);
     // std::vector<cv::Mat> bats = file_list_to_data_list(sub_files, ".csv");
-    
+
     // img_vec_to_file(bats, new_names);
     // cv::Mat data = bats[0];
     // cv::Mat colored_segments = color_labels(data);
@@ -71,7 +71,7 @@ int main() {
     // }
     // cv::KalmanFilter kalman = initialize_kalman(p0[0]);
     analyze_bats();
-    
+
     return 0;
 }
 
@@ -114,8 +114,8 @@ void analyze_bats() {
 
     // initialize velocity vectors
     velocities = calculate_velocities(t0_centers, t0_centers);
-    
-    
+
+
     std::vector<cv::Point> kalman_centers;
     for (int i = 1; i < center_files.size(); i++) {
         std::vector<cv::Point> matched, unmatched_t0, unmatched_t1;
@@ -128,7 +128,7 @@ void analyze_bats() {
         cv::Mat frame1 = csv_to_img(csv_files[i]);
         cv::threshold(frame1, frame1, 0.5, 255, cv::THRESH_BINARY_INV);
         cv::cvtColor(frame1, frame1, cv::COLOR_GRAY2BGR);
-        
+
         // prune centers to those that are not closely related to other centers
         edmonds = cost_matrix(t0_centers, t1_centers, velocities);
         std::vector<cv::Point> old_filtered = filter_old_centers(edmonds, t0_centers, 70);
@@ -139,7 +139,7 @@ void analyze_bats() {
         draw_centers(frame0, t0_centers, cv::Scalar(255, 0, 0));
         draw_centers(frame0, t1_centers, cv::Scalar(0, 0, 255));
         draw_centers(frame1, new_filtered, cv::Scalar(255, 0, 0));
-        
+
         // old filtered centers likely left image => terminate trajectory
         terminate_trajectories(old_filtered, trajectories, point_to_trajectory);
 
@@ -151,7 +151,7 @@ void analyze_bats() {
         // remove filtered centers from t0 and t1
         cout << "Filtering centers." << endl;
         std::vector<cv::Point> new_t0 = remove_centers(t0_centers, old_filtered);
-        std::vector<cv::Point> new_t1 = remove_centers(t1_centers, new_filtered); 
+        std::vector<cv::Point> new_t1 = remove_centers(t1_centers, new_filtered);
 
 
         cout << "number of pointers: " << point_to_trajectory.size() << endl;
@@ -217,7 +217,7 @@ void analyze_bats() {
             update_trajectory(new_t0[j], new_t1[assignments[j]], trajectories, point_to_trajectory);
         }
         cout << "number of pointers: " << point_to_trajectory.size() << endl;
- 
+
         // get current tracked points
         cout << "Getting current tracked points." << endl;
         t1_centers.clear();
@@ -394,16 +394,41 @@ cv::Point kalman_loop(cv::KalmanFilter & kalman, cv::Point measurement) {
 }
 
 
-void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::map<std::pair<int, int>, int> idx_to_traj);
-void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::map<std::pair<int, int>, int> idx_to_traj) {
+void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::vector<std::vector<cv::Point> > trajectories, std::map<std::pair<int, int>, int> idx_to_traj);
+void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::vector<std::vector<cv::Point> > trajectories, std::map<std::pair<int, int>, int> idx_to_traj) {
+    std::map<int, int> traj_idx_to_kal_idx;
+    std::vector<cv::KalmanFilter> new_kalman_filters;
+    std::vector<cv::Point> estimates;
     for (int i = 0; i < centers.size(); i++) {
         int idx = find_trajectory(centers[i], idx_to_traj);
         if (idx == -1) {
-            // n
+            cout << "Error: trying to update non-existent trajectory." << endl;
+            estimates.push_back(centers[i]);
+        } else if (idx > kalman_filters.size()) {
+            // New trajectory from last update.
+            cv::KalmanFilter new_filter = initialize_kalman(centers[i]);
+            new_kalman_filters.push_back(new_filter);
+            // Map new Kalman filter to trajectory index later mapping
+            traj_idx_to_kal_idx[idx] = new_kalman_filters.size() - 1;
+            estimates.push_back(centers[i]);
         } else {
-            kalman_loop(kalman_filters[idx], centers[i]);
+            // trajectory already tracked, update point using kalman filter
+            // add estimated point to trajectories.
+            cv::Point new_point = kalman_loop(kalman_filters[idx], centers[i]);
+            estimates.push_back(new_point);
+            update_trajectory(centers[i], new_point, trajectories, idx_to_traj);
         }
     }
+
+    // add new kalman filters to their respective location in the kalman vector
+    for (std::map<int, int>::iterator it; it != traj_idx_to_kal_idx.end(); it++) {
+        int new_kal_idx = it -> second;
+        kalman_filters.push_back(new_kalman_filters[new_kal_idx]);
+    }
+    cout << "n kalman filters: " << kalman_filters.size() << endl;
+    cout << "n trajectories: " << trajectories.size();
+
+
 }
 void draw_centers(cv::Mat & img, std::vector<cv::Point> centers, cv::Scalar color) {
     for (int i = 0; i < centers.size(); i++) {
@@ -534,7 +559,7 @@ std::set<int> create_index_set(std::vector<cv::Point> t1_centers) {
 }
 
 std::vector<cv::Point> filter_old_centers(std::vector<std::vector<double> > cost_m, std::vector<cv::Point> centers, double d_thresh) {
-    vector<cv::Point> old_centers; 
+    vector<cv::Point> old_centers;
     for (int i = 0; i < cost_m.size(); i++) {
         bool passed = false;
         for (int j = 0; j < cost_m.size(); j++) {
@@ -684,7 +709,7 @@ void print_trajectories(std::vector<std::vector<cv::Point> > trajectories) {
 }
 
 // std::vector<cv::Point> get_current_points(std::vector<std::vector<cv::Point> > trajectories) {
-    
+
 //     for (int j = 0; j < trajectories.size(); j++) {
 //         cout << "j = " << j << endl;
 //         int k = trajectories[j].size();
