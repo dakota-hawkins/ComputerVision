@@ -332,3 +332,8 @@ Get current tracked points.
 @return centers whose latest entry in their trajectories is not (-1, -1). 
 */
 std::vector<cv::Point> get_current_points(std::vector<std::vector<cv::Point> > trajectories);
+
+/*
+Print trajectories.
+*/
+void print_trajectories(std::vector<std::vector<cv::Point> > trajectories);

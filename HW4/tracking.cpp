@@ -111,6 +111,7 @@ void analyze_bats() {
 
     // initialize trajectory objects
     init_trajectories(t0_centers, trajectories, point_to_trajectory);
+
     // initialize velocity vectors
     velocities = calculate_velocities(t0_centers, t0_centers);
     
@@ -131,11 +132,12 @@ void analyze_bats() {
         // prune centers to those that are not closely related to other centers
         edmonds = cost_matrix(t0_centers, t1_centers, velocities);
         std::vector<cv::Point> old_filtered = filter_old_centers(edmonds, t0_centers, 70);
-        std::vector<cv::Point> new_filtered = filter_new_centers(edmonds, t1_centers, 70);
+        std::vector<cv::Point> new_filtered = filter_new_centers(edmonds, t1_centers, 50);
         cout << "old filtered objects: " << old_filtered.size() << endl;
         cout << "new filtered objects: " << new_filtered.size() << endl;
         draw_centers(frame1, old_filtered, cv::Scalar(0, 0, 255));
         draw_centers(frame0, t0_centers, cv::Scalar(255, 0, 0));
+        draw_centers(frame0, t1_centers, cv::Scalar(0, 0, 255));
         draw_centers(frame1, new_filtered, cv::Scalar(255, 0, 0));
         
         // old filtered centers likely left image => terminate trajectory
@@ -145,23 +147,23 @@ void analyze_bats() {
         for (int j = 0; j < new_filtered.size(); j++) {
             add_trajectory(new_filtered[j], trajectories, point_to_trajectory);
         }
-
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
         // remove filtered centers from t0 and t1
         cout << "Filtering centers." << endl;
         std::vector<cv::Point> new_t0 = remove_centers(t0_centers, old_filtered);
         std::vector<cv::Point> new_t1 = remove_centers(t1_centers, new_filtered); 
 
+
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
         // get velocities for kept t0_centers
         cout << "Getting velocities for kept t0." << endl;
         velocities.clear();
-        for (int j = 0; j < new_t0.size(); j++) {
-            velocities.push_back(cv::Point(0, 0));
-        }
-        // velocities = get_velocities(t0_centers, trajectories, point_to_trajectory);
-        
+        velocities = get_velocities(t0_centers, trajectories, point_to_trajectory);
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
 
         // recalculate distance matrix
         cout << "Recalculating cost matrix." << endl;
+        edmonds.clear();
         edmonds = cost_matrix(new_t0, new_t1, velocities);
 
         // assign left over t0 centers to t1 centers
@@ -187,6 +189,7 @@ void analyze_bats() {
                 trajectories[traj_idx].push_back(new_center);
             }
         }
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
 
         // unassigned t1 center likely due to unocclusion
         cout << "Dealing with innocculsion." << endl;
@@ -203,20 +206,34 @@ void analyze_bats() {
                 update_trajectory(new_center, unmatched_t1[j], trajectories, point_to_trajectory);
             }
         }
-        // matched t0 to t1 centers:
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
+
+
+        // update trajectories for matched t0 to t1 centers:
         cout << "Dealing with matched centers." << endl;
         for (int j = 0; j < assignments.size(); j++) {
+            // cout << "old center: " << new_t0[j] << endl;;
+            // cout << "new center: " << new_t1[assignments[j]] << endl;
             update_trajectory(new_t0[j], new_t1[assignments[j]], trajectories, point_to_trajectory);
         }
-
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
+ 
         // get current tracked points
         cout << "Getting current tracked points." << endl;
-        t0_centers.clear();
-        t0_centers = get_current_points(trajectories);
+        t1_centers.clear();
+        t1_centers = get_current_points(trajectories);
+
+        // update kalman filter
+        update_kalman_filters(t1_centers, kalman_filters);
+
         // get new velocities
         cout << "Updating velocities." << endl;
         velocities.clear();
+        cout << "length of trajectories: " << trajectories.size() << endl;
+        cout << "number of pointers: " << point_to_trajectory.size() << endl;
+
         velocities = get_velocities(t0_centers, trajectories, point_to_trajectory);
+        draw_trajectories(frame1, trajectories);
 
         cv::imshow("t0", frame0);
         cv::imshow("t1", frame1);
@@ -377,6 +394,17 @@ cv::Point kalman_loop(cv::KalmanFilter & kalman, cv::Point measurement) {
 }
 
 
+void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::map<std::pair<int, int>, int> idx_to_traj);
+void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::map<std::pair<int, int>, int> idx_to_traj) {
+    for (int i = 0; i < centers.size(); i++) {
+        int idx = find_trajectory(centers[i], idx_to_traj);
+        if (idx == -1) {
+            // n
+        } else {
+            kalman_loop(kalman_filters[idx], centers[i]);
+        }
+    }
+}
 void draw_centers(cv::Mat & img, std::vector<cv::Point> centers, cv::Scalar color) {
     for (int i = 0; i < centers.size(); i++) {
         cv::circle(img=img, centers[i], 3, color, 2);
@@ -410,7 +438,7 @@ void add_trajectory(cv::Point new_center, std::vector<std::vector<cv::Point> >& 
     // push center trajectory onto trajectories
     trajectories.push_back(new_trajectory);
     // point center to trajectory
-    pair_to_idx[new_pair] = int(trajectories.size());
+    pair_to_idx[new_pair] = int(trajectories.size()) - 1;
 }
 
 void update_trajectories(std::vector<cv::Point> t0_centers, std::vector<cv::Point> t1_centers, std::vector<int> assignments, std::vector<std::vector<cv::Point> >& trajectory, std::map<std::pair<int, int>, int>& traj_index) {
@@ -442,8 +470,7 @@ void terminate_trajectories(std::vector<cv::Point> centers,
     std::pair<int, int> temp_pair;
     int idx;
     for (int i = 0; i < centers.size(); i++) {
-        temp_pair = std::make_pair(centers[i].x, centers[i].y);
-        idx = point_to_traj[temp_pair];
+        idx = find_trajectory(centers[i], point_to_traj);
         trajectories[idx].push_back(cv::Point(-1, -1));
     }
 }
@@ -480,28 +507,19 @@ std::vector<cv::Point> calculate_velocities(std::vector<cv::Point> t0_centers, s
 
 std::vector<cv::Point> get_velocities(std::vector<cv::Point> centers, std::vector<std::vector<cv::Point> > trajectories, std::map<std::pair<int, int>, int> idx_to_traj) {
     std::vector<cv::Point> velocities;
-    std::vector<cv::Point> current_trajectory;
-    int idx, center_idx;
-    cout << "n traj" << trajectories.size() << endl;
-    for (int i = 0; i < centers.size(); i++) {
-        cout << "finding trajectory: " << endl;
-        idx = find_trajectory(centers[i], idx_to_traj);
-        if (idx == -1) {
-            cout << "Error: cannot calculate velocity for non-logged center." << endl;
-        }
-        current_trajectory = trajectories[idx];
-        std::vector<cv::Point> current_trajectory = trajectories[idx];
-        cout << "traj index: " << idx << endl;
-        center_idx = current_trajectory.size();
-        cout << "center index: " << center_idx;
-        // no velocity if first point
-        if (center_idx == 0) {
-            cout << "flagged\n";
-            cv::Point temp = cv::Point(0, 0);
-            cout << "Pushing back 0s\n";
-            velocities.push_back(temp);
+    for (int j = 0; j < centers.size(); j++) {
+        int traj_index = find_trajectory(centers[j], idx_to_traj);
+        if (traj_index != -1) {
+            std::vector<cv::Point> current_traj = trajectories[traj_index];
+            if (current_traj.size() > 1) {
+                int n = current_traj.size();
+                velocities.push_back(current_traj[n - 1] - current_traj[n - 2]);
+            } else {
+                velocities.push_back(cv::Point(0, 0));
+            }
         } else {
-            velocities.push_back(trajectories[idx][center_idx] - trajectories[idx][center_idx - 1]);
+            cout << "Warning: no trajectory for point. Returning zero velocity." << endl;
+            velocities.push_back(cv::Point(0, 0));
         }
     }
     return velocities;
@@ -620,11 +638,13 @@ cv::Point ensure_unique_center(cv::Point center, std::map<std::pair<int, int>, i
 
 void update_trajectory(cv::Point old_center, cv::Point new_center, std::vector<std::vector<cv::Point> >& trajectories, std::map<std::pair<int, int>, int>& idx_to_traj) {
     int idx = find_trajectory(old_center, idx_to_traj);
-    std::pair<int, int> new_point;
+    std::pair<int, int> new_point, old_point;
     if (idx != -1) {
         int new_idx = find_trajectory(new_center, idx_to_traj);
-        if (new_idx == -1) {
+        if (new_idx == -1 || new_center == old_center) {
             trajectories[idx].push_back(new_center);
+            old_point = std::make_pair(old_center.x, old_center.y);
+            idx_to_traj.erase(old_point);
             new_point = std::make_pair(new_center.x, new_center.y);
             idx_to_traj[new_point] = idx;
         } else {
@@ -645,9 +665,32 @@ void update_trajectory(cv::Point old_center, cv::Point new_center, std::vector<s
 std::vector<cv::Point> get_current_points(std::vector<std::vector<cv::Point> > trajectories) {
     std::vector<cv::Point> current_points;
     for (int i = 0; i < trajectories.size(); i++) {
-        int n = trajectories.size() - 1;
+        int n = trajectories[i].size() - 1;
         if (trajectories[i][n] != cv::Point(-1, -1)) {
             current_points.push_back(trajectories[i][n]);
         }
     }
+    return current_points;
 }
+
+void print_trajectories(std::vector<std::vector<cv::Point> > trajectories) {
+    for (int i = 0; i < trajectories.size(); i++) {
+        cout << "{";
+        for (int j = 0; j < trajectories[i].size(); j++) {
+            cout << trajectories[i][j] << ", ";
+        }
+        cout << "}\n";
+    }
+}
+
+// std::vector<cv::Point> get_current_points(std::vector<std::vector<cv::Point> > trajectories) {
+    
+//     for (int j = 0; j < trajectories.size(); j++) {
+//         cout << "j = " << j << endl;
+//         int k = trajectories[j].size();
+//         cout << "k = " << k << endl;
+//         if (trajectories[j][k - 1] != cv::Point(-1, -1)) {
+//             t0_centers.push_back(trajectories[j][k-1]);
+//         }
+//     }
+// }
