@@ -247,9 +247,9 @@ Remove centers from a vector of centers.
 @param original: original vector of centers.
 @param del_centers: centers to delete from `original`.
 
-@return void
+@return new vector of centers. 
 */
-void remove_centers(std::vector<cv::Point>& original, std::vector<cv::Point>& del_centers);
+std::vector<cv::Point> remove_centers(std::vector<cv::Point>& original, std::vector<cv::Point>& del_centers);
 
 /*!
 Calculate velocities from logged trajectories.

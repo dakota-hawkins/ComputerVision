@@ -148,13 +148,13 @@ void analyze_bats() {
 
         // remove filtered centers from t0 and t1
         cout << "Filtering centers." << endl;
-        remove_centers(t0_centers, old_filtered);
-        remove_centers(t1_centers, new_filtered); // gonna want to keep t1_centers
+        std::vector<cv::Point> new_t0 = remove_centers(t0_centers, old_filtered);
+        std::vector<cv::Point> new_t1 = remove_centers(t1_centers, new_filtered); 
 
         // get velocities for kept t0_centers
         cout << "Getting velocities for kept t0." << endl;
         velocities.clear();
-        for (int j = 0; j < t0_centers.size(); j++) {
+        for (int j = 0; j < new_t0.size(); j++) {
             velocities.push_back(cv::Point(0, 0));
         }
         // velocities = get_velocities(t0_centers, trajectories, point_to_trajectory);
@@ -162,7 +162,7 @@ void analyze_bats() {
 
         // recalculate distance matrix
         cout << "Recalculating cost matrix." << endl;
-        edmonds = cost_matrix(t0_centers, t1_centers, velocities);
+        edmonds = cost_matrix(new_t0, new_t1, velocities);
 
         // assign left over t0 centers to t1 centers
         center_assignment.Solve(edmonds, assignments);
@@ -170,7 +170,7 @@ void analyze_bats() {
         // unassigned t0 clusters likely due to occlusion
         // std::vector<cv::Point> unmatched_t0 = unmatched_t0_centers(assignments, t0_centers);
         cout << "Dealing with occlusion" << endl;
-        unmatched_t0 = unmatched_t0_centers(assignments, t0_centers);
+        unmatched_t0 = unmatched_t0_centers(assignments, new_t0);
         if (unmatched_t0.size() > 0) {
             // likely occluded, assign to nearby center + <dx, dy>
             cv::Point closest, new_center;
@@ -178,7 +178,7 @@ void analyze_bats() {
                 // find past trajectory
                 int traj_idx = find_trajectory(unmatched_t0[j], point_to_trajectory);
                 // find nearest center
-                closest = find_nearest_center(unmatched_t0[j], t1_centers);
+                closest = find_nearest_center(unmatched_t0[j], new_t1);
                 // update new center to estimated center using toward nearest
                 // center
                 new_center = (closest - unmatched_t0[j]) + unmatched_t0[j];
@@ -190,13 +190,13 @@ void analyze_bats() {
 
         // unassigned t1 center likely due to unocclusion
         cout << "Dealing with innocculsion." << endl;
-        unmatched_t1 = unmatched_t1_centers(assignments, t1_centers);
+        unmatched_t1 = unmatched_t1_centers(assignments, new_t1);
         if (unmatched_t1.size() > 0) {
             cv::Point closest, new_center;
             std::vector<cv::Point> new_traj;
             for (int j = 0; j < unmatched_t1.size(); j++) {
                 // find closest t0 center, likely from there
-                closest = find_nearest_center(unmatched_t1[j], t0_centers);
+                closest = find_nearest_center(unmatched_t1[j], new_t0);
                 new_center = (unmatched_t1[j] - closest) + closest;
                 new_center = ensure_unique_center(new_center, point_to_trajectory);
                 add_trajectory(new_center, trajectories, point_to_trajectory);
@@ -206,14 +206,16 @@ void analyze_bats() {
         // matched t0 to t1 centers:
         cout << "Dealing with matched centers." << endl;
         for (int j = 0; j < assignments.size(); j++) {
-            update_trajectory(t0_centers[j], t1_centers[assignments[j]], trajectories, point_to_trajectory);
+            update_trajectory(new_t0[j], new_t1[assignments[j]], trajectories, point_to_trajectory);
         }
 
         // get current tracked points
         cout << "Getting current tracked points." << endl;
+        t0_centers.clear();
         t0_centers = get_current_points(trajectories);
         // get new velocities
         cout << "Updating velocities." << endl;
+        velocities.clear();
         velocities = get_velocities(t0_centers, trajectories, point_to_trajectory);
 
         cv::imshow("t0", frame0);
@@ -545,10 +547,14 @@ std::vector<cv::Point> filter_new_centers(std::vector<std::vector<double> > cost
     return new_centers;
 }
 
-void remove_centers(std::vector<cv::Point>& original, std::vector<cv::Point>& del_centers) {
-    for (int i = 0; i < del_centers.size(); i++) {
-        original.erase(std::remove(original.begin(), original.end(), del_centers[i]), original.begin());
+std::vector<cv::Point> remove_centers(std::vector<cv::Point>& original, std::vector<cv::Point>& del_centers) {
+    std::vector<cv::Point> keep;
+    for (int i = 0; i < original.size(); i++) {
+        if (std::find(del_centers.begin(), del_centers.end(), original[i]) == del_centers.end()) {
+            keep.push_back(original[i]);
+        }
     }
+    return keep;
 }
 
 
