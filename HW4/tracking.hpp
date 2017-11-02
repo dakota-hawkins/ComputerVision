@@ -30,6 +30,37 @@ analyze bats
 void analyze_bats();
 
 /*!
+analyze fish.
+*/
+void analyze_fish();
+
+/*!
+Process fish images to extract frame data, binarize image, and locate centers.
+
+@param frame: current image to process.
+@param b_img: binary image.
+@param centers: empty vector to write centers to.
+
+@return void. 
+*/
+void process_fish_image(cv::Mat& frame, cv::Mat& b_img, std::vector<cv::Point>& centers);
+
+/*!
+Convert a fish image to a binary image. 
+
+@param src: colored image to threshold.
+@param dst: destination image to write binary image to.
+*/
+void binary_fish(cv::Mat src, cv::Mat dst);
+
+/*!
+Get centers for binary fish images.
+
+@param src: binary contour image to find centers over. 
+*/
+std::vector<cv::Point> get_fish_centers(cv::Mat src);
+
+/*!
 Convert a .csv file to an image file.
 
 Used to convert bat segmentations into images.
@@ -137,7 +168,7 @@ Draw trajectories of point assignments.
 
 @return void
 */
-void draw_trajectories(cv::Mat &img, std::vector<std::vector<cv::Point> > trajectories);
+void draw_trajectories(cv::Mat &img, std::vector<std::vector<cv::Point> > trajectories, int length=5);
 
 /*!
 Initialize vector of vectors to keep track trajectories.
@@ -337,3 +368,13 @@ std::vector<cv::Point> get_current_points(std::vector<std::vector<cv::Point> > t
 Print trajectories.
 */
 void print_trajectories(std::vector<std::vector<cv::Point> > trajectories);
+
+/*
+Update kalman filters after center assignment.
+
+@param centers: identified centers for t1.
+@param kalman_filters: kalman filters for t0 trajectories.
+@param trajectories: current tracked trajectories.
+@param idx_to_traj: map pointing centers to current trajectories. 
+*/
+void update_kalman_filters(std::vector<cv::Point> centers, std::vector<cv::KalmanFilter>& kalman_filters, std::vector<std::vector<cv::Point> >& trajectories, std::map<std::pair<int, int>, int>& idx_to_traj);
